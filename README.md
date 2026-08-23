@@ -1,5 +1,8 @@
 # ReproMin
 
+![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)
+![License Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)
+
 ReproMin reduces a failing repository while continuously checking that the
 original failure still occurs. Its output is intended to be a small,
 standalone reproduction that can be attached to an issue or turned into a
@@ -926,6 +929,26 @@ PYTHONPATH=src python3 -m compileall -q src tests
 See [CONTRIBUTING.md](CONTRIBUTING.md) for extension points and project rules,
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for reducer invariants, and
 [SECURITY.md](SECURITY.md) before running commands from an untrusted project.
+
+## Documentation
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - core invariants, reducer
+  behavior, and report/checkpoint schema.
+- [docs/LLM_REDUCTION.md](docs/LLM_REDUCTION.md) - optional semantic reducer
+  seam and its provider-agnostic contract.
+- [benchmarks/README.md](benchmarks/README.md) - real fixtures and acceptance
+  gates.
+- [CONTRIBUTING.md](CONTRIBUTING.md) - project rules and extension points.
+- [CHANGELOG.md](CHANGELOG.md) - notable changes by release.
+
+## Contributing
+
+ReproMin accepts bug reports, feature requests, reducer adapters, and
+documentation improvements. Start with
+[CONTRIBUTING.md](CONTRIBUTING.md) and the repository
+[issue templates](.github/ISSUE_TEMPLATE). Participation is governed by the
+[Code of Conduct](CODE_OF_CONDUCT.md). Security reports should follow
+[SECURITY.md](SECURITY.md).
 
 ## License
 

@@ -10,6 +10,7 @@ import sys
 from pathlib import Path, PurePosixPath
 from typing import Callable, Optional, Sequence, Tuple
 
+from repomin import __version__
 from repomin.execution import CommandRunner, DockerRunner, Runner, RunnerError
 from repomin.cargo_manifest import CargoManifestReducer
 from repomin.composer_manifest import ComposerManifestReducer
@@ -356,6 +357,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="repomin",
         description="Reduce a repository while preserving a command failure.",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version="repomin %s" % __version__,
     )
     parser.add_argument("source", nargs="?", default=".", help="repository to reduce")
     parser.add_argument("--command", required=True, help="failure reproduction command")
