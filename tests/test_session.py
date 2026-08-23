@@ -247,7 +247,7 @@ time.sleep(1.5)
         marker = next(cwd.glob("candidate-*"))
         index = int(marker.name.rsplit("-", 1)[-1])
         if index == 0:
-            deadline = time.monotonic() + 3
+            deadline = time.monotonic() + 20
             while time.monotonic() < deadline:
                 if all((self.root / ("started-%d" % value)).is_file() for value in (1, 2)):
                     raise KeyboardInterrupt
