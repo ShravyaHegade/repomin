@@ -1,0 +1,4 @@
+-r requirements/runtime.txt
+-c constraints.txt
+--extra-index-url https://example.invalid/simple
+rich==14.1.0

@@ -1,0 +1,16 @@
+source "https://rubygems.org"
+ruby "3.2.0"
+
+gem "repomin-required", "~> 1.0"
+gem "repomin-unused", "~> 2.0"
+
+group :development do
+  gem "repomin-unused-test"
+end
+
+gem("repomin-unused-parenthesized")
+gem(
+  "repomin-unused-multiline"
+)
+
+gemspec

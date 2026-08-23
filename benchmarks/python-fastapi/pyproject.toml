@@ -1,0 +1,23 @@
+[project]
+name = "repomin-fastapi-fixture"
+version = "0.0.0"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi==0.116.1",
+  "httpx==0.28.1",
+  "rich==14.1.0",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest==8.4.1",
+  "pytest-cov==6.2.1",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

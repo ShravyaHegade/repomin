@@ -1,0 +1,17 @@
+__pycache__/
+*.egg-info/
+*.class
+*.py[cod]
+.DS_Store
+.coverage
+.gradle/
+.idea/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.tox/
+.venv/
+build/
+dist/
+htmlcov/
+target/

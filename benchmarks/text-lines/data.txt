@@ -1,0 +1,7 @@
+alpha
+beta
+NEEDLE
+gamma
+delta
+epsilon
+zeta

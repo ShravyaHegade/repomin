@@ -1,0 +1,3 @@
+[workspace]
+members = ["app", "required-lib", "unused-lib", "unused"]
+resolver = "2"

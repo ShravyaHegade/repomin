@@ -1,0 +1,26 @@
+{
+  "name": "repomin/composer-fixture",
+  "require": {
+    "php": ">=8.1",
+    "repomin/required": "1.0.0",
+    "repomin/unused": "2.0.0"
+  },
+  "require-dev": {
+    "repomin/unused-test-tool": "1.0.0"
+  },
+  "replace": {
+    "repomin/replaced": "self.version"
+  },
+  "scripts": {
+    "test": "phpunit",
+    "unused": "echo unused"
+  },
+  "repositories": [
+    {"type": "path", "url": "required"},
+    {"type": "vcs", "url": "unused"}
+  ],
+  "autoload": {
+    "psr-4": {"Repomin\\\\": "src/"}
+  },
+  "extra": {"keep": true}
+}

@@ -1,0 +1,23 @@
+{
+  "name": "repomin-node-package-fixture",
+  "version": "1.0.0",
+  "description": "A package manifest reduction fixture",
+  "dependencies": {
+    "required-sdk": "1.0.0",
+    "unused-sdk": "2.0.0"
+  },
+  "devDependencies": {
+    "unused-test-tool": "3.0.0"
+  },
+  "scripts": {
+    "test": "node reproduce.js",
+    "unused": "node unused.js"
+  },
+  "workspaces": ["packages/required", "packages/unused"],
+  "overrides": {
+    "unused-transitive": "4.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

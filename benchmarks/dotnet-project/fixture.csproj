@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Repomin.Required" Version="1.0.0" />
+    <PackageReference Include="Repomin.Unused" Version="2.0.0" />
+    <ProjectReference Include="../required/Required.csproj" />
+    <ProjectReference Include="../unused/Unused.csproj" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <Compile Include="Required.cs" />
+    <Compile Include="Unused.cs" />
+    <None Include="README.md" />
+  </ItemGroup>
+  <Import Project="$(CustomTargets)" Condition="Exists('$(CustomTargets)')" />
+</Project>
