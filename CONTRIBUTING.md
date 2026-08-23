@@ -1,5 +1,11 @@
 # Contributing
 
+New contributors should start with [docs/EXAMPLES.md](docs/EXAMPLES.md) to see
+the tool in action, then pick a task from
+[docs/GOOD_FIRST_ISSUES.md](docs/GOOD_FIRST_ISSUES.md). Bug reports and feature
+requests use the repository issue templates, and all participation is governed
+by [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
 ReproMin is intentionally organized around small extension points:
 
 - manifest adapters for npm, Composer, Cargo, Go, and additional build systems;
