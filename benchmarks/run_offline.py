@@ -257,7 +257,7 @@ def _check_native_process() -> None:
         "--candidate-runs",
         "2",
         "--jobs",
-        "2",
+        "1",
     ]
     with _run_repomin(
         "native-process",
