@@ -1,7 +1,8 @@
 # ReproMin
 
+![CI](https://github.com/fly1d/repomin/actions/workflows/ci.yml/badge.svg)
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)
-![License Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)
+![License Apache-2.0](https://img.shields.io/github/license/fly1d/repomin)
 
 ReproMin reduces a failing repository while continuously checking that the
 original failure still occurs. Its output is intended to be a small,
