@@ -41,6 +41,27 @@ cd repomin
 python3 -m pip install -e .
 ```
 
+### Shell completion
+
+ReproMin can print completion definitions for Bash, Zsh, and Fish. Evaluate the
+script for the current shell, or install it using that shell's normal
+completion directory:
+
+```sh
+# Bash
+eval "$(repomin completion bash)"
+
+# Zsh
+eval "$(repomin completion zsh)"
+
+# Fish
+repomin completion fish | source
+```
+
+The completion includes the supported adapter, source reducer, semantic
+backend, Docker policy, and other enum values. Path-bearing options fall back
+to the shell's file completion.
+
 ```sh
 python3 -m venv .venv
 . .venv/bin/activate

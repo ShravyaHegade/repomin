@@ -13,7 +13,8 @@ not a promise of dates.
 
 ## Next: contributor scale
 
-- Add shell completion and clearer command diagnostics.
+- Improve common CLI diagnostics for misconfigured paths, limits, and failure
+  criteria.
 - Publish coverage artifacts and benchmark trend summaries for pull requests.
 - Add one carefully scoped ecosystem adapter with a network-free fixture.
 - Improve examples for Java, Python, and semantic reduction workflows.

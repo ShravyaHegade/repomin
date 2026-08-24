@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `repomin completion bash|zsh|fish` for shell-native option, enum, and path
+  completion without adding runtime dependencies.
 - Opt-in `--semantic-reducer http` seam with a provider-agnostic
   OpenAI-compatible backend, default-off and with no third-party runtime
   dependency.

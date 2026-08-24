@@ -14,6 +14,7 @@ from repomin import __version__
 from repomin.execution import CommandRunner, DockerRunner, Runner, RunnerError
 from repomin.cargo_manifest import CargoManifestReducer
 from repomin.composer_manifest import ComposerManifestReducer
+from repomin.completion import SUPPORTED_SHELLS, completion_script
 from repomin.dotnet_manifest import DotnetManifestReducer
 from repomin.go_manifest import GoManifestReducer
 from repomin.gradle import GradleReducer
@@ -357,6 +358,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="repomin",
         description="Reduce a repository while preserving a command failure.",
+        epilog=(
+            "Generate shell completion with `repomin completion bash`, "
+            "`repomin completion zsh`, or `repomin completion fish`."
+        ),
     )
     parser.add_argument(
         "--version",
@@ -710,7 +715,28 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
-    args = build_parser().parse_args(argv)
+    raw_argv = list(sys.argv[1:] if argv is None else argv)
+    if raw_argv and raw_argv[0] == "completion":
+        if len(raw_argv) == 2 and raw_argv[1] in SUPPORTED_SHELLS:
+            print(completion_script(raw_argv[1]), end="")
+            return 0
+        if raw_argv[1:] in ([], ["--help"], ["-h"]):
+            print("usage: repomin completion {%s}" % ",".join(SUPPORTED_SHELLS))
+            print("print a completion script for the selected shell")
+            return 0
+        if len(raw_argv) == 2:
+            print(
+                "unsupported shell %r (choose one of: %s)"
+                % (raw_argv[1], ", ".join(SUPPORTED_SHELLS)),
+                file=sys.stderr,
+            )
+        else:
+            print(
+                "usage: repomin completion {%s}" % ",".join(SUPPORTED_SHELLS),
+                file=sys.stderr,
+            )
+        return 2
+    args = build_parser().parse_args(raw_argv)
     session_path: Optional[Path] = None
     session: Optional[ReductionSession] = None
     try:

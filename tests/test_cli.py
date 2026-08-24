@@ -205,6 +205,37 @@ class _SemanticStubHandler(BaseHTTPRequestHandler):
 
 
 class CliTest(unittest.TestCase):
+    def test_shell_completion_scripts_are_available(self) -> None:
+        for shell, marker in (
+            ("bash", "complete -F _repomin repomin"),
+            ("zsh", "#compdef repomin"),
+            ("fish", "complete -c repomin"),
+        ):
+            with self.subTest(shell=shell):
+                stdout = io.StringIO()
+                stderr = io.StringIO()
+                with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(
+                    stderr
+                ):
+                    exit_code = main(["completion", shell])
+                self.assertEqual(0, exit_code)
+                self.assertIn(marker, stdout.getvalue())
+                self.assertEqual("", stderr.getvalue())
+
+    def test_shell_completion_rejects_unknown_shell(self) -> None:
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            exit_code = main(["completion", "powershell"])
+        self.assertEqual(2, exit_code)
+        self.assertIn("unsupported shell", stderr.getvalue())
+
+    def test_shell_completion_help_is_available(self) -> None:
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            exit_code = main(["completion", "--help"])
+        self.assertEqual(0, exit_code)
+        self.assertIn("usage: repomin completion {bash,zsh,fish}", stdout.getvalue())
+
     def test_match_is_required_without_process_failure_mode(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "source"
