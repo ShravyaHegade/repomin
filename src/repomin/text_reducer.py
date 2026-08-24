@@ -61,7 +61,8 @@ def _discover_targets(root: Path, paths: Sequence[str]) -> List[TextLineTarget]:
         if not path.is_file() or path.is_symlink():
             continue
         try:
-            text = path.read_text(encoding="utf-8")
+            with path.open("r", encoding="utf-8", newline="") as stream:
+                text = stream.read()
         except (OSError, UnicodeDecodeError):
             continue
         offset = 0

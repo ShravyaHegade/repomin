@@ -25,6 +25,11 @@ class _Removal:
     content_hash: str
 
 
+def _write_preserving_newlines(path: Path, text: str) -> None:
+    with path.open("w", encoding="utf-8", newline="") as stream:
+        stream.write(text)
+
+
 class _RecordingSession:
     def __init__(self, accepted_description=None) -> None:
         self.accepted_description = accepted_description
@@ -124,7 +129,7 @@ class BatchingTest(unittest.TestCase):
             root = Path(directory)
             path = root / "fixture.txt"
             original = "alpha\nbeta\ngamma\n"
-            path.write_text(original, encoding="utf-8")
+            _write_preserving_newlines(path, original)
 
             def removal(start, end):
                 return _Removal(
@@ -150,8 +155,8 @@ class BatchingTest(unittest.TestCase):
             second = root / "second.txt"
             first_original = "alpha\nbeta\n"
             second_original = "gamma\ndelta\n"
-            first.write_text(first_original, encoding="utf-8")
-            second.write_text(second_original, encoding="utf-8")
+            _write_preserving_newlines(first, first_original)
+            _write_preserving_newlines(second, second_original)
 
             valid = _Removal(
                 Path("first.txt"),
@@ -172,8 +177,8 @@ class BatchingTest(unittest.TestCase):
             second = root / "second.txt"
             first_original = "alpha\nbeta\n"
             second_original = "gamma\ndelta\n"
-            first.write_text(first_original, encoding="utf-8")
-            second.write_text(second_original, encoding="utf-8")
+            _write_preserving_newlines(first, first_original)
+            _write_preserving_newlines(second, second_original)
 
             first_removal = _Removal(
                 Path("first.txt"),
