@@ -82,7 +82,7 @@ jobs:
         run: python -m compileall -q src tests
       - name: Report test coverage
         run: |
-          python -m coverage run --branch -m unittest discover -s tests
+          PYTHONPATH=src python -m coverage run --branch -m unittest discover -s tests
           python -m coverage report --show-missing
       - name: Build wheel and source distribution
         run: python -m build
