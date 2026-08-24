@@ -25,6 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated the Maven benchmark acceptance envelope for
   `hierarchical-fixed-point-v2`.
 - Recorded `text_files` in reports and persistent-session identity.
+- Stabilized Windows process, text, Java classpath, and test-fixture behavior;
+  Windows is now a required CI matrix lane.
+
+## [0.1.0.dev1] - 2026-08-24
+
+Cross-platform pre-alpha feasibility build with semantic and text reducers,
+persistent sessions, holdout certification, offline benchmarks, and contributor
+documentation.
 
 ## [0.1.0.dev0] - Unreleased
 
