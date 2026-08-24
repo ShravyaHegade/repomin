@@ -316,6 +316,7 @@ class FailureOracleTest(unittest.TestCase):
 
             self.assertLessEqual(crossing_probability, alpha + 1e-12)
 
+    @unittest.skipUnless(os.name == "posix", "POSIX shell command fixture")
     def test_accepts_only_matching_nonzero_failure(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             runner = CommandRunner(

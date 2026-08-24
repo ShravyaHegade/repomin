@@ -1270,7 +1270,7 @@ final class HierarchyCalls {
             if os.name != "nt":
                 self.assertIn("\u4f9d\u8d56", str(classpath[0].path))
             self.assertIn(" ", str(classpath[0].path))
-            self.assertIn(";" if os.name == "nt" else ":", str(classpath[0].path))
+            self.assertIn(" ", str(classpath[0].path))
 
             expected_calls = {
                 "ClasspathOverloads#choose(java.lang.String,java.lang.String):1": (

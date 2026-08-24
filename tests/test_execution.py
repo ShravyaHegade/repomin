@@ -169,6 +169,7 @@ class ExecutionTest(unittest.TestCase):
 
             collect.assert_not_called()
 
+    @unittest.skipUnless(os.name == "posix", "POSIX shell command fixture")
     def test_collects_surefire_diagnostics_generated_by_command(self) -> None:
         report = """\
 <testsuite name="generated">
@@ -746,6 +747,7 @@ printf '%s\\n' "$*" >> "{actions}"
         self.assertFalse(result.timed_out)
         self.assertFalse(oracle.accepts(result))
 
+    @unittest.skipUnless(os.name == "posix", "POSIX shell command fixture")
     def test_excessive_command_output_is_a_resource_failure(self) -> None:
         capture_limit = 1024 * 1024
         with tempfile.TemporaryDirectory() as directory:

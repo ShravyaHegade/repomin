@@ -572,7 +572,12 @@ def _hash_java_classpath_file(
     if (
         _java_classpath_content_signature(file_stat)
         != _java_classpath_content_signature(opened_after)
-        or expected_signature != _java_classpath_stat_signature(path_after)
+        or (
+            expected_signature != _java_classpath_stat_signature(path_after)
+            if os.name != "nt"
+            else _java_classpath_content_signature(file_stat)
+            != _java_classpath_content_signature(path_after)
+        )
         or content_size != file_stat.st_size
     ):
         raise JavaReducerError(
