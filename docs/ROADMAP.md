@@ -1,27 +1,40 @@
 # Roadmap
 
-ReproMin is a pre-alpha project. This roadmap describes the order of work,
-not a promise of dates.
+ReproMin is a pre-alpha project. This roadmap describes priorities, not release
+dates. Concrete contribution tasks live in
+[GOOD_FIRST_ISSUES.md](GOOD_FIRST_ISSUES.md).
 
-## Current: trustworthy reductions
+## Delivered foundation
 
-- Keep the oracle contract explicit and fail closed on infrastructure errors.
-- Maintain reproducible persistent sessions, holdout certification, and
-  cross-platform execution.
-- Expand offline benchmarks before adding a new reducer or backend.
-- Keep reports, checkpoints, and documentation auditable for issue reports.
+- Fail-closed oracle matching, repeated sampling, run-wide confidence control,
+  final holdout certification, and auditable reports.
+- Persistent checkpoint/resume sessions and host/Docker execution on Linux,
+  macOS, and Windows.
+- Structured manifest reduction across Maven, Gradle, Python/Pipenv, Node,
+  Composer, MSBuild, Bundler, Cargo, and Go.
+- Native Java and Python source reducers, an opt-in HTTP semantic reducer, and
+  explicit text-file reduction.
+- Network-free regression benchmarks, branch coverage artifacts, installable
+  wheel/source-distribution tests, issue templates, and contributor guidance.
 
-## Next: contributor scale
+## Current: contributor feedback
 
-- Improve common CLI diagnostics for misconfigured limits and failure criteria.
-- Publish coverage artifacts and benchmark trend summaries for pull requests.
-- Add one carefully scoped ecosystem adapter with a network-free fixture.
-- Improve examples for Java, Python, and semantic reduction workflows.
+- Keep a small, accurate set of good-first issues with explicit acceptance
+  criteria and maintainers' scope notes.
+- Collect reproducible reductions from real repositories and turn failures into
+  minimized public fixtures when licensing permits.
+- Tighten benchmark report assertions and publish comparable trend summaries
+  without making unsupported performance claims.
+- Improve runnable Java, Python, Docker, and semantic workflow examples.
 
-## Later: integrations
+## Next: release readiness
 
-- Provide stable extension interfaces for remote workers and CI services.
-- Add optional report exporters without changing the core reduction contract.
+- Resolve feedback from the GitHub development release before choosing the next
+  version or publishing channel.
+- Define stable adapter/exporter interfaces only after at least two independent
+  integrations need the same contract.
+- Add optional report exporters and remote execution boundaries without
+  changing the core reduction/oracle acceptance model.
 - Evaluate additional language analyzers only when they preserve hashed,
   parser-backed edits and deterministic rediscovery.
 

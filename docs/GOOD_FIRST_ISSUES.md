@@ -1,34 +1,28 @@
 # Good first issues
 
-These are starter tasks that do not require deep knowledge of the reduction
-engine. Each should include tests or documentation, following
-[CONTRIBUTING.md](../CONTRIBUTING.md).
+The following GitHub issues are intentionally scoped for a first contribution.
+Comment on an issue before starting, keep the change inside its stated scope,
+and follow [CONTRIBUTING.md](../CONTRIBUTING.md) for tests and documentation.
 
-## Tooling and ergonomics
+## Ready to claim
 
-- Improve `--help` copy for the most common options.
-- Add shell completion for common shells.
-- Add a coverage step to the `quality` CI job and keep it informative.
-- Improve error messages for common misconfigurations such as a missing
-  `--match`, an invalid Docker limit, or a non-existent `--keep` path.
+- [#1 Add PowerShell completion generation](https://github.com/fly1d/repomin/issues/1)
+  extends the dependency-free completion command and has a focused CLI test
+  surface.
+- [#2 Add a Chinese quick start](https://github.com/fly1d/repomin/issues/2)
+  creates a concise, runnable entry point without translating the full reference
+  manual.
+- [#3 Support Directory.Build.props in the MSBuild adapter](https://github.com/fly1d/repomin/issues/3)
+  reuses the existing hardened XML reducer and adds one network-free fixture.
 
-## Documentation
+## Proposing another starter task
 
-- Record an asciinema or GIF for a real before/after reduction and link it from
-  the README.
-- Translate the README or add a language-specific quick start.
-- Add a worked example for a new ecosystem to `docs/EXAMPLES.md`.
+A good starter issue should describe one user workflow, name the likely files,
+define observable acceptance criteria, and avoid changing reduction semantics.
+Suitable areas include documentation examples, completion ergonomics, strict
+manifest extensions that reuse an existing parser, and deterministic benchmark
+assertions. Open a feature request before implementing a new reducer or backend
+whose trust boundary is not already documented.
 
-## New adapters
-
-- Add a structured manifest adapter for a build system not yet supported (for
-  example, Bazel `MODULE.bazel`, Pipenv `Pipfile`, or a `.NET`
-  `Directory.Build.props` file). Follow the hashed-text-range rules in
-  [ARCHITECTURE.md](ARCHITECTURE.md) and add a network-free benchmark.
-
-## Benchmarks
-
-- Add a new fixture under `benchmarks/` and register it in
-  `benchmarks/run_offline.py`.
-- Tighten an existing benchmark's acceptance gate with deterministic file
-  hashes and report assertions.
+Completed tasks are removed from this page so contributors do not begin stale
+work. The complete project direction remains in [ROADMAP.md](ROADMAP.md).

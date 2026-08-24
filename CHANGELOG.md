@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Structured Pipenv `Pipfile` reduction for direct runtime, development, and
+  interpreter requirement entries, with source settings and `Pipfile.lock`
+  deliberately preserved.
+- A network-free `pipenv-package` benchmark and Pipenv CLI/documentation
+  coverage.
 - `repomin completion bash|zsh|fish` for shell-native option, enum, and path
   completion without adding runtime dependencies.
 - Opt-in `--semantic-reducer http` seam with a provider-agnostic
@@ -24,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Refreshed the contributor roadmap and published scoped good-first issues for
+  PowerShell completion, a Chinese quick start, and shared MSBuild props.
+- Updated GitHub Actions to their Node.js 24-based major versions.
 - Explicit `--keep` paths now fail before baseline execution when the path is
   missing or is not a regular file/directory; source and output path errors now
   include the next corrective action.
