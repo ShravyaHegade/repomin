@@ -1081,7 +1081,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     )
                 if args.adapter == "dotnet" and not dotnet_applicable:
                     raise ValueError(
-                        "--adapter dotnet requires at least one .csproj, .fsproj, or .vbproj"
+                        "--adapter dotnet requires at least one .csproj, .fsproj, "
+                        ".vbproj, or Directory.Build.props"
                     )
                 if args.adapter == "ruby" and not ruby_applicable:
                     raise ValueError(
