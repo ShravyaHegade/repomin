@@ -235,6 +235,7 @@ class CliTest(unittest.TestCase):
             ("bash", "complete -F _repomin repomin"),
             ("zsh", "#compdef repomin"),
             ("fish", "complete -c repomin"),
+            ("powershell", "Register-ArgumentCompleter -Native -CommandName repomin"),
         ):
             with self.subTest(shell=shell):
                 stdout = io.StringIO()
@@ -246,12 +247,15 @@ class CliTest(unittest.TestCase):
                 self.assertEqual(0, exit_code)
                 self.assertIn(marker, stdout.getvalue())
                 self.assertIn("pipenv", stdout.getvalue())
+                if shell == "powershell":
+                    self.assertIn("CompletionResult", stdout.getvalue())
+                    self.assertIn("--adapter", stdout.getvalue())
                 self.assertEqual("", stderr.getvalue())
 
     def test_shell_completion_rejects_unknown_shell(self) -> None:
         stderr = io.StringIO()
         with contextlib.redirect_stderr(stderr):
-            exit_code = main(["completion", "powershell"])
+            exit_code = main(["completion", "tcsh"])
         self.assertEqual(2, exit_code)
         self.assertIn("unsupported shell", stderr.getvalue())
 
@@ -260,7 +264,10 @@ class CliTest(unittest.TestCase):
         with contextlib.redirect_stdout(stdout):
             exit_code = main(["completion", "--help"])
         self.assertEqual(0, exit_code)
-        self.assertIn("usage: repomin completion {bash,zsh,fish}", stdout.getvalue())
+        self.assertIn(
+            "usage: repomin completion {bash,zsh,fish,powershell}",
+            stdout.getvalue(),
+        )
 
     def test_match_is_required_without_process_failure_mode(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

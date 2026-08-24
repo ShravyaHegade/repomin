@@ -361,7 +361,8 @@ def build_parser() -> argparse.ArgumentParser:
         description="Reduce a repository while preserving a command failure.",
         epilog=(
             "Generate shell completion with `repomin completion bash`, "
-            "`repomin completion zsh`, or `repomin completion fish`."
+            "`repomin completion zsh`, `repomin completion fish`, or "
+            "`repomin completion powershell`."
         ),
     )
     parser.add_argument(

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Final
 
 
-SUPPORTED_SHELLS: Final = ("bash", "zsh", "fish")
+SUPPORTED_SHELLS: Final = ("bash", "zsh", "fish", "powershell")
 
 
 _BASH = r'''# Bash completion for repomin.
@@ -153,9 +153,106 @@ complete -c repomin -f -l java-classpath -r -a '(__fish_complete_path)'
 '''
 
 
+_POWERSHELL = r'''# PowerShell completion for repomin.
+Register-ArgumentCompleter -Native -CommandName repomin -ScriptBlock {
+    param($wordToComplete, $commandAst, $cursorPosition)
+
+    $options = @(
+        '--version', '--help', '--command', '--match', '--exit-code', '--output',
+        '--session', '--resume', '--timeout', '--backend', '--docker-image',
+        '--docker-network', '--docker-cpus', '--docker-memory',
+        '--docker-pids-limit', '--docker-tmpfs-size', '--docker-workspace-limit',
+        '--jobs', '--no-cache', '--max-attempts', '--max-duration', '--ignore',
+        '--ignore-path', '--gitignore', '--gitignore-file', '--gitignore-recursive',
+        '--keep', '--env', '--java-exception', '--python-exception',
+        '--process-failure', '--baseline-runs', '--min-baseline-passes',
+        '--candidate-runs', '--min-candidate-passes', '--min-baseline-rate',
+        '--min-candidate-rate', '--confidence', '--run-confidence',
+        '--holdout-runs', '--min-holdout-rate', '--holdout-confidence',
+        '--adapter', '--source-reducer', '--text-file', '--semantic-reducer',
+        '--semantic-endpoint', '--semantic-model', '--semantic-timeout',
+        '--java-classpath', '--verbose'
+    )
+    $valueOptions = @(
+        '--command', '--match', '--exit-code', '--output', '--session', '--timeout',
+        '--backend', '--docker-image', '--docker-network', '--docker-cpus',
+        '--docker-memory', '--docker-pids-limit', '--docker-tmpfs-size',
+        '--docker-workspace-limit', '--jobs', '--max-attempts', '--max-duration',
+        '--ignore', '--ignore-path', '--gitignore-file', '--keep', '--env',
+        '--baseline-runs', '--min-baseline-passes', '--candidate-runs',
+        '--min-candidate-passes', '--min-baseline-rate', '--min-candidate-rate',
+        '--confidence', '--run-confidence', '--holdout-runs', '--min-holdout-rate',
+        '--holdout-confidence', '--adapter', '--source-reducer', '--text-file',
+        '--semantic-reducer', '--semantic-endpoint', '--semantic-model',
+        '--semantic-timeout', '--java-classpath'
+    )
+    $pathOptions = @(
+        '--output', '--session', '--ignore-path', '--gitignore-file', '--keep',
+        '--text-file', '--java-classpath'
+    )
+    $enumValues = @{
+        '--backend' = @('host', 'docker')
+        '--docker-network' = @('none', 'bridge', 'host')
+        '--adapter' = @('auto', 'none', 'maven', 'gradle', 'python', 'pipenv', 'node', 'composer', 'dotnet', 'ruby', 'cargo', 'go')
+        '--source-reducer' = @('auto', 'none', 'java', 'python')
+        '--semantic-reducer' = @('none', 'http')
+    }
+
+    $elements = @($commandAst.CommandElements)
+    $previous = if ($elements.Count -gt 1) {
+        $elements[$elements.Count - 2].Extent.Text
+    } else {
+        ''
+    }
+    if ($enumValues.ContainsKey($previous)) {
+        $enumValues[$previous] |
+            Where-Object { $_ -like "$wordToComplete*" } |
+            ForEach-Object {
+                [System.Management.Automation.CompletionResult]::new(
+                    $_, $_, 'ParameterValue', $_
+                )
+            }
+        return
+    }
+    if ($valueOptions -contains $previous) {
+        if ($pathOptions -contains $previous) {
+            $pathPattern = if ([string]::IsNullOrEmpty($wordToComplete)) {
+                '*'
+            } else {
+                "$wordToComplete*"
+            }
+            Get-ChildItem -Path $pathPattern -Force -ErrorAction SilentlyContinue |
+                ForEach-Object {
+                    $completionText = $_.FullName
+                    if ($_.PSIsContainer) {
+                        $completionText += [System.IO.Path]::DirectorySeparatorChar
+                    }
+                    [System.Management.Automation.CompletionResult]::new(
+                        $completionText, $_.Name, 'ProviderItem', $_.FullName
+                    )
+                }
+        }
+        return
+    }
+    $options |
+        Where-Object { $_ -like "$wordToComplete*" } |
+        ForEach-Object {
+            [System.Management.Automation.CompletionResult]::new(
+                $_, $_, 'ParameterName', $_
+            )
+        }
+}
+'''
+
+
 def completion_script(shell: str) -> str:
     """Return the completion script for one supported shell."""
-    scripts = {"bash": _BASH, "zsh": _ZSH, "fish": _FISH}
+    scripts = {
+        "bash": _BASH,
+        "zsh": _ZSH,
+        "fish": _FISH,
+        "powershell": _POWERSHELL,
+    }
     try:
         return scripts[shell]
     except KeyError as exc:

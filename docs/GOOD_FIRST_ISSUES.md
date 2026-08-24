@@ -6,9 +6,6 @@ and follow [CONTRIBUTING.md](../CONTRIBUTING.md) for tests and documentation.
 
 ## Ready to claim
 
-- [#1 Add PowerShell completion generation](https://github.com/fly1d/repomin/issues/1)
-  extends the dependency-free completion command and has a focused CLI test
-  surface.
 - [#2 Add a Chinese quick start](https://github.com/fly1d/repomin/issues/2)
   creates a concise, runnable entry point without translating the full reference
   manual.
