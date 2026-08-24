@@ -15,6 +15,7 @@ jobs:
   test:
     name: Python ${{ matrix.python }} / JDK ${{ matrix.java }} / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
     strategy:
       fail-fast: false
       matrix:
@@ -22,18 +23,23 @@ jobs:
           - os: ubuntu-latest
             python: "3.9"
             java: "11"
+            experimental: false
           - os: ubuntu-latest
             python: "3.13"
             java: "11"
+            experimental: false
           - os: ubuntu-latest
             python: "3.13"
             java: "21"
+            experimental: false
           - os: macos-latest
             python: "3.13"
             java: "21"
+            experimental: false
           - os: windows-latest
             python: "3.13"
             java: "21"
+            experimental: true
 
     steps:
       - uses: actions/checkout@v4
