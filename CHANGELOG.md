@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Explicit `--keep` paths now fail before baseline execution when the path is
+  missing or is not a regular file/directory; source and output path errors now
+  include the next corrective action.
 - Updated the Maven benchmark acceptance envelope for
   `hierarchical-fixed-point-v2`.
 - Recorded `text_files` in reports and persistent-session identity.

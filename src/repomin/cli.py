@@ -776,6 +776,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             ignore_names=args.ignore_names,
             ignore_paths=args.ignore_paths,
         )
+        _validate_keep_paths(source, args.keep_paths)
         metadata_output = _metadata_output_path(output)
         _reject_symbolic_link(metadata_output, "metadata output")
         if metadata_output.exists() and not args.resume:
@@ -1395,7 +1396,10 @@ def _resolve_paths(
 ) -> tuple:
     source = Path(source_value).expanduser().resolve()
     if not source.is_dir():
-        raise NotADirectoryError("source is not a directory: %s" % source)
+        raise NotADirectoryError(
+            "source is not a directory: %s (check SOURCE or pass a repository path)"
+            % source
+        )
     output_path = (
         Path(output_value).expanduser()
         if output_value
@@ -1408,10 +1412,36 @@ def _resolve_paths(
         output = output_path.parent.resolve() / output_path.name
     _reject_symbolic_link(output, "output")
     if output.exists() and not allow_existing_output:
-        raise FileExistsError("output already exists: %s" % output)
+        raise FileExistsError(
+            "output already exists: %s (choose another --output or use --resume)"
+            % output
+        )
     if _is_within(output, source):
         raise ValueError("output must not be inside the source repository")
     return source, output
+
+
+def _validate_keep_paths(source: Path, keep_paths: Sequence[str]) -> None:
+    """Reject explicit keep paths that cannot protect anything."""
+    for value in sorted(set(keep_paths)):
+        candidate = source.joinpath(*PurePosixPath(value).parts)
+        try:
+            status = candidate.lstat()
+        except FileNotFoundError as exc:
+            raise ValueError(
+                "keep path does not exist in the source repository: %s "
+                "(check --keep %s)" % (value, value)
+            ) from exc
+        except OSError as exc:
+            raise ValueError(
+                "keep path could not be inspected: %s (check --keep %s)"
+                % (value, value)
+            ) from exc
+        if not (stat.S_ISREG(status.st_mode) or stat.S_ISDIR(status.st_mode)):
+            raise ValueError(
+                "keep path must be a regular file or directory: %s "
+                "(check --keep %s)" % (value, value)
+            )
 
 
 def _reject_symbolic_link(path: Path, label: str) -> None:

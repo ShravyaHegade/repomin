@@ -205,6 +205,31 @@ class _SemanticStubHandler(BaseHTTPRequestHandler):
 
 
 class CliTest(unittest.TestCase):
+    def test_missing_keep_path_reports_an_actionable_diagnostic(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source"
+            source.mkdir()
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        str(source),
+                        "--command",
+                        "false",
+                        "--match",
+                        "failure",
+                        "--keep",
+                        "docs/LICENSE",
+                    ]
+                )
+
+            self.assertEqual(2, exit_code)
+            self.assertIn(
+                "keep path does not exist in the source repository: docs/LICENSE",
+                stderr.getvalue(),
+            )
+            self.assertIn("check --keep docs/LICENSE", stderr.getvalue())
+
     def test_shell_completion_scripts_are_available(self) -> None:
         for shell, marker in (
             ("bash", "complete -F _repomin repomin"),
