@@ -325,6 +325,17 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         ("input-controls-budget", _check_input_controls_budget),
         ("semantic-stub", _check_semantic_stub),
         ("text-lines", _check_text_lines),
+        (
+            "python-pyproject",
+            lambda: _check_manifest(
+                "python-pyproject",
+                "python",
+                ["python3", "reproduce.py"],
+                "pyproject.toml",
+                ("repomin-pyproject-fixture", "repomin-required==1.0"),
+                ("repomin-unused-",),
+            ),
+        ),
         ("node-package", lambda: _check_manifest("node-package", "node", ["python3", "reproduce.py"], "package.json", ("required-sdk", "packages/required"), ("unused-sdk", "unused-test-tool"))),
         ("pipenv-package", lambda: _check_manifest("pipenv-package", "pipenv", ["python3", "reproduce.py"], "Pipfile", ("required-package",), ("unused-package", "unused-test"))),
         ("composer-package", lambda: _check_manifest("composer-package", "composer", ["python3", "reproduce.py"], "composer.json", ("repomin/required", "autoload", "psr-4"))),

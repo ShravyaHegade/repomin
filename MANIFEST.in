@@ -42,6 +42,9 @@ include benchmarks/ruby-gemfile/README.md
 include benchmarks/text-lines/reproduce.py
 include benchmarks/text-lines/data.txt
 include benchmarks/text-lines/README.md
+include benchmarks/python-pyproject/pyproject.toml
+include benchmarks/python-pyproject/reproduce.py
+include benchmarks/python-pyproject/README.md
 include benchmarks/semantic-stub/reproduce.py
 include benchmarks/semantic-stub/data.txt
 include benchmarks/semantic-stub/run.py

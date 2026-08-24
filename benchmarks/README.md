@@ -72,6 +72,11 @@ one package while allowing unrelated runtime, development, and interpreter
 option entries to disappear; source settings remain unchanged. See
 `benchmarks/pipenv-package/README.md`.
 
+`python-pyproject` is a network-free Python `pyproject.toml` fixture. Its
+oracle keeps the project identity and one required PEP 621 dependency while
+allowing optional, build-system, Poetry, PDM, uv, and dependency-group entries
+to disappear. See `benchmarks/python-pyproject/README.md`.
+
 `dotnet-project` is an MSBuild `.csproj` fixture. Its offline Python oracle
 requires selected package/project references and the target framework while
 allowing unrelated item entries to disappear. See

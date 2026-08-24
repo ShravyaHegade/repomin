@@ -1,0 +1,29 @@
+[project]
+name = "repomin-pyproject-fixture"
+version = "0.0.0"
+dependencies = [
+  "repomin-required==1.0",
+  "repomin-unused-project==9.0",
+]
+
+[project.optional-dependencies]
+test = ["repomin-unused-optional==2.0"]
+
+[build-system]
+requires = ["repomin-unused-build==3.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.poetry.dependencies]
+repomin-unused-poetry = "^4.0"
+
+[tool.pdm.dependencies]
+repomin-unused-pdm = ">=5"
+
+[tool.pdm.dev-dependencies]
+lint = ["repomin-unused-pdm-dev>=6"]
+
+[tool.uv]
+dev-dependencies = ["repomin-unused-uv>=7"]
+
+[dependency-groups]
+docs = ["repomin-unused-group>=8"]

@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   deliberately preserved.
 - A network-free `pipenv-package` benchmark and Pipenv CLI/documentation
   coverage.
+- A network-free `python-pyproject` benchmark covering supported dependency
+  declaration forms in `pyproject.toml`.
 - Optional machine-readable offline benchmark summaries with per-fixture status
   and elapsed time, uploaded as a CI artifact.
 - `repomin completion bash|zsh|fish` for shell-native option, enum, and path
