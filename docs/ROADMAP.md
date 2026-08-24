@@ -31,6 +31,8 @@ dates. Concrete contribution tasks live in
 
 - Resolve feedback from the GitHub development release before choosing the next
   version or publishing channel.
+- Keep the repeatable [release checklist](RELEASING.md) current as artifact and
+  verification workflows evolve.
 - Define stable adapter/exporter interfaces only after at least two independent
   integrations need the same contract.
 - Add optional report exporters and remote execution boundaries without

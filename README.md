@@ -991,6 +991,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for extension points and project rules,
   gates.
 - [CONTRIBUTING.md](CONTRIBUTING.md) - project rules and extension points.
 - [CHANGELOG.md](CHANGELOG.md) - notable changes by release.
+- [docs/RELEASING.md](docs/RELEASING.md) - GitHub Release checklist and artifact verification.
 
 ## Contributing
 

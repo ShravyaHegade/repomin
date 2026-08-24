@@ -7,6 +7,11 @@ before starting so overlapping work stays visible. Bug reports and feature
 requests use the repository issue templates, and all participation is governed
 by [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
+Maintainers preparing a GitHub Release should follow
+[docs/RELEASING.md](docs/RELEASING.md). It is intentionally separate from the
+contributor rules because release artifacts require version, checksum, and
+installation verification.
+
 ReproMin is intentionally organized around small extension points:
 
 - manifest adapters for Maven, Gradle, Python/Pipenv, npm, Composer, MSBuild,
