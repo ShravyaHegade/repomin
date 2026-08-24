@@ -6,6 +6,18 @@ Run the complete network-free set from the repository root with:
 python3 benchmarks/run_offline.py
 ```
 
+For CI or tooling that needs a stable machine-readable summary, provide an
+output path:
+
+```sh
+python3 benchmarks/run_offline.py --json-output /tmp/repomin-benchmarks.json
+```
+
+The JSON uses schema version `1` and records the Python/platform identity,
+aggregate pass/skip/fail counts, and one status plus elapsed time per fixture.
+Failures include only a bounded error summary; the full reproduction output
+remains in the command logs.
+
 The runner executes each offline fixture in a fresh temporary output directory,
 checks the exported payload and report, and independently reruns the oracle. It
 skips toolchain-dependent fixtures (`cargo`, `go`, `ruby`) when their command is

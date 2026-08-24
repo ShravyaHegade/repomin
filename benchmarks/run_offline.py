@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import shutil
@@ -10,9 +11,10 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable, Iterator
+from typing import Callable, Iterator, Optional, Sequence
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -285,7 +287,39 @@ class _Skipped(Exception):
     pass
 
 
-def main() -> int:
+def _write_summary(path: Path, checks: list[dict[str, object]]) -> None:
+    counts = {
+        "passed": sum(item["status"] == "passed" for item in checks),
+        "skipped": sum(item["status"] == "skipped" for item in checks),
+        "failed": sum(item["status"] == "failed" for item in checks),
+    }
+    summary = {
+        "schema_version": 1,
+        "python": "%d.%d.%d" % sys.version_info[:3],
+        "platform": sys.platform,
+        **counts,
+        "checks": checks,
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(summary, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--json-output",
+        type=Path,
+        metavar="PATH",
+        help="write a machine-readable result summary to PATH",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    args = _parse_args(argv)
     checks: list[tuple[str, Callable[[], None]]] = [
         ("input-controls", _check_input_controls),
         ("input-controls-budget", _check_input_controls_budget),
@@ -303,17 +337,48 @@ def main() -> int:
     passed = 0
     skipped = 0
     failed = 0
+    results: list[dict[str, object]] = []
     for name, check in checks:
+        started = time.monotonic()
         try:
             check()
             passed += 1
+            results.append(
+                {
+                    "name": name,
+                    "status": "passed",
+                    "duration_seconds": round(time.monotonic() - started, 3),
+                }
+            )
             print("PASS %s" % name)
         except _Skipped as skip:
             skipped += 1
+            results.append(
+                {
+                    "name": name,
+                    "status": "skipped",
+                    "duration_seconds": round(time.monotonic() - started, 3),
+                    "detail": str(skip),
+                }
+            )
             print("SKIP %s (%s)" % (name, skip))
         except Exception as exc:  # noqa: BLE001
             failed += 1
+            results.append(
+                {
+                    "name": name,
+                    "status": "failed",
+                    "duration_seconds": round(time.monotonic() - started, 3),
+                    "error": str(exc)[:2000],
+                }
+            )
             print("FAIL %s: %s" % (name, exc))
+    if args.json_output is not None:
+        try:
+            _write_summary(args.json_output, results)
+        except OSError as exc:
+            print("could not write benchmark JSON: %s" % exc, file=sys.stderr)
+            failed += 1
     print(
         "offline benchmarks: %d passed, %d skipped, %d failed"
         % (passed, skipped, failed)
