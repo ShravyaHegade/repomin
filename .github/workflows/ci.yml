@@ -75,11 +75,15 @@ jobs:
           distribution: temurin
           java-version: "11"
       - name: Install build tools
-        run: python -m pip install build ruff twine
+        run: python -m pip install build coverage ruff twine
       - name: Lint sources and tests
         run: python -m ruff check src tests
       - name: Byte-compile sources and tests
         run: python -m compileall -q src tests
+      - name: Report test coverage
+        run: |
+          python -m coverage run --branch -m unittest discover -s tests
+          python -m coverage report --show-missing
       - name: Build wheel and source distribution
         run: python -m build
       - name: Check distribution metadata

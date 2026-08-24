@@ -278,6 +278,14 @@ Run the test suite with:
 PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```
 
+To inspect branch coverage locally, install the CI-only coverage tool and run:
+
+```sh
+python3 -m pip install coverage
+PYTHONPATH=src python3 -m coverage run --branch -m unittest discover -s tests
+python3 -m coverage report --show-missing
+```
+
 Run the configured lint and byte-compile checks with:
 
 ```sh
