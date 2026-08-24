@@ -302,6 +302,7 @@ class JavaReducerTest(unittest.TestCase):
             finally:
                 session.close()
 
+    @unittest.skipUnless(os.name == "posix", "POSIX shell command fixture")
     def test_reduces_java_ast_without_losing_failure(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "source"
@@ -341,6 +342,7 @@ class JavaReducerTest(unittest.TestCase):
             finally:
                 session.close()
 
+    @unittest.skipUnless(os.name == "posix", "POSIX shell command fixture")
     def test_reduces_annotations_parameters_arguments_and_expressions(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "source"
@@ -382,6 +384,7 @@ class JavaReducerTest(unittest.TestCase):
             finally:
                 session.close()
 
+    @unittest.skipUnless(os.name == "posix", "POSIX shell command fixture")
     def test_symbol_aware_parameter_removal_updates_cross_file_calls(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "source"
