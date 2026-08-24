@@ -24,6 +24,9 @@ files, modules, build manifests, dependencies, and source symbols.
 
 ReproMin requires Python 3.9 or newer and has no runtime dependencies.
 
+中文用户可以先阅读[中文快速开始](docs/QUICKSTART.zh-CN.md)，其中包含一个
+可直接运行的最小缩减示例、安全边界和报告说明。
+
 ## Install
 
 The current pre-alpha release is distributed from GitHub, not PyPI yet:

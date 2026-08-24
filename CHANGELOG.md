@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A concise Chinese quick start covering installation, a runnable reduction,
+  oracle semantics, host execution risk, and report locations.
 - PowerShell completion generation through `repomin completion powershell`,
   including enum-value suggestions for the structured adapter and backend
   options.
