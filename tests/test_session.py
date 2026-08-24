@@ -385,6 +385,7 @@ class ReductionSessionTest(unittest.TestCase):
             self.assertEqual(legacy_digest(split), legacy_digest(joined))
             self.assertNotEqual(_tree_digest(split), _tree_digest(joined))
 
+    @unittest.skipIf(os.name == "nt", "POSIX file-mode semantics")
     def test_tree_digest_covers_root_mode_and_entry_semantics(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -683,6 +684,7 @@ class ReductionSessionTest(unittest.TestCase):
             finally:
                 os.chflags(source_entry, 0, follow_symlinks=False)
 
+    @unittest.skipIf(os.name == "nt", "POSIX atime semantics")
     def test_tree_digest_normalizes_atime_even_when_hashing_fails(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -740,6 +742,7 @@ class ReductionSessionTest(unittest.TestCase):
                 ):
                     _tree_digest(root)
 
+    @unittest.skipIf(os.name == "nt", "POSIX hardlink semantics")
     @unittest.skipUnless(hasattr(os, "link"), "hardlink API unavailable")
     def test_source_tree_hardlink_is_rejected_before_copy(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -768,6 +771,7 @@ class ReductionSessionTest(unittest.TestCase):
                     )
             copytree.assert_not_called()
 
+    @unittest.skipIf(os.name == "nt", "POSIX hardlink semantics")
     @unittest.skipUnless(hasattr(os, "link"), "hardlink API unavailable")
     def test_source_tree_external_hardlink_alias_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -909,6 +913,7 @@ class ReductionSessionTest(unittest.TestCase):
                     else:
                         self.assertEqual([], list(scratch.iterdir()))
 
+    @unittest.skipIf(os.name == "nt", "POSIX hardlink semantics")
     @unittest.skipUnless(hasattr(os, "link"), "hardlink API unavailable")
     def test_candidate_hardlink_is_rejected_before_oracle_execution(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -1861,6 +1866,7 @@ class ReductionSessionTest(unittest.TestCase):
             finally:
                 session.close()
 
+    @unittest.skipIf(os.name == "nt", "POSIX mtime semantics")
     def test_measured_phase_records_wall_time_and_net_bytes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = self._session(
@@ -2389,6 +2395,7 @@ class ReductionSessionTest(unittest.TestCase):
                 _clear_tree_flags(session.root)
                 session.close()
 
+    @unittest.skipIf(os.name == "nt", "POSIX file-mode/mtime semantics")
     def test_uncertified_export_rejects_metadata_loss_before_publication(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -2870,6 +2877,7 @@ class ReductionSessionTest(unittest.TestCase):
             finally:
                 session.close()
 
+    @unittest.skipIf(os.name == "nt", "POSIX root-mode semantics")
     def test_certified_checkpoint_rejects_payload_root_mode_change(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -2896,6 +2904,7 @@ class ReductionSessionTest(unittest.TestCase):
                 )
             self.assertEqual(0, runner.calls)
 
+    @unittest.skipIf(os.name == "nt", "POSIX mtime semantics")
     def test_certified_checkpoint_rejects_payload_mtime_change(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
