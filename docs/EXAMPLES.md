@@ -55,6 +55,23 @@ required.txt
 The sibling `../example-minimal.repomin/report.json` records the attempts,
 accepted mutations, and phase accounting.
 
+## Shrink a Pipenv `Pipfile`
+
+For a network-free reproduction that only needs one package declaration, run
+the dedicated Pipenv adapter:
+
+```sh
+repomin . \
+  --command 'python3 reproduce.py' \
+  --match 'ORIGINAL_FAILURE' \
+  --adapter pipenv \
+  --source-reducer none \
+  --output ../pipenv-minimal
+```
+
+Only direct entries in `[packages]`, `[dev-packages]`, and `[requires]` are
+eligible. Pipenv source settings and `Pipfile.lock` are preserved.
+
 ## Shrink a data file's contents with `--text-file`
 
 Add a data file whose oracle only needs one line:

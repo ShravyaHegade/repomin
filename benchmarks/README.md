@@ -40,6 +40,11 @@ offline Python oracle requires one package and the autoload map while allowing
 unrelated requirements, scripts, repositories, and replacement metadata to
 disappear. See `benchmarks/composer-package/README.md`.
 
+`pipenv-package` is a network-free Pipenv `Pipfile` fixture. Its oracle keeps
+one package while allowing unrelated runtime, development, and interpreter
+option entries to disappear; source settings remain unchanged. See
+`benchmarks/pipenv-package/README.md`.
+
 `dotnet-project` is an MSBuild `.csproj` fixture. Its offline Python oracle
 requires selected package/project references and the target framework while
 allowing unrelated item entries to disappear. See

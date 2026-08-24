@@ -880,11 +880,13 @@ hard-interrupted active pass is classified as aborted when it is restored.
   NAME=VALUE`; values are injected into host/Docker commands but are represented
   only by names and a SHA-256 digest in reports and checkpoints.
 - Docker images must contain `/bin/sh` and all required build dependencies.
-- Structured manifest adapters currently support Maven, Gradle, Python,
+- Structured manifest adapters currently support Maven, Gradle, Python and
+  Pipenv,
   npm-compatible `package.json` files, Composer `composer.json` files, MSBuild
   project files, Ruby/Bundler Gemfiles, Cargo manifests, and Go
   module/workspace manifests. Node lockfiles, `composer.lock`, `Gemfile.lock`,
-  `Cargo.lock`, and `go.sum` are intentionally not rewritten by their adapters.
+  `Cargo.lock`, `Pipfile.lock`, and `go.sum` are intentionally not rewritten by
+  their adapters.
   Composer autoload and arbitrary `extra` metadata remain unchanged. MSBuild
   property groups, imports, and arbitrary metadata remain unchanged. Ruby
   multiline calls and arbitrary Ruby code remain unchanged. Go workspace

@@ -245,6 +245,7 @@ class CliTest(unittest.TestCase):
                     exit_code = main(["completion", shell])
                 self.assertEqual(0, exit_code)
                 self.assertIn(marker, stdout.getvalue())
+                self.assertIn("pipenv", stdout.getvalue())
                 self.assertEqual("", stderr.getvalue())
 
     def test_shell_completion_rejects_unknown_shell(self) -> None:
@@ -3473,6 +3474,83 @@ class CliTest(unittest.TestCase):
             self.assertNotIn("unused = '2'", manifest)
             report = _report(output)
             self.assertIn("cargo-manifest", [event["phase"] for event in report["events"]])
+
+    def test_pipenv_adapter_runs_through_cli_and_report(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            output = root / "output"
+            source.mkdir()
+            (source / "Pipfile").write_text(
+                "[[source]]\nurl = 'https://pypi.org/simple'\n\n"
+                "[packages]\nrequired = '*'\nunused = '*'\n\n"
+                "[dev-packages]\nunused-test = '*'\n\n"
+                "[requires]\npython_version = '3.11'\n",
+                encoding="utf-8",
+            )
+            (source / "reproduce.py").write_text(
+                "text = open('Pipfile', encoding='utf-8').read()\n"
+                "if 'required = ' not in text:\n"
+                "    raise SystemExit(2)\n"
+                "print('ORIGINAL_FAILURE')\n"
+                "raise SystemExit(1)\n",
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        str(source),
+                        "--command",
+                        "python3 reproduce.py",
+                        "--match",
+                        "ORIGINAL_FAILURE",
+                        "--adapter",
+                        "pipenv",
+                        "--source-reducer",
+                        "none",
+                        "--output",
+                        str(output),
+                    ]
+                )
+
+            self.assertEqual(0, exit_code, stderr.getvalue())
+            manifest = (output / "Pipfile").read_text(encoding="utf-8")
+            self.assertIn("required = '*'", manifest)
+            self.assertNotIn("unused = '*'", manifest)
+            self.assertNotIn("unused-test = '*'", manifest)
+            self.assertIn("[[source]]", manifest)
+            report = _report(output)
+            self.assertIn("pipenv-manifest", [event["phase"] for event in report["events"]])
+
+    def test_forced_pipenv_adapter_requires_pipfile(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            output = root / "output"
+            source.mkdir()
+            (source / "reproduce.py").write_text(
+                "print('ORIGINAL_FAILURE')\nraise SystemExit(1)\n",
+                encoding="utf-8",
+            )
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        str(source),
+                        "--command",
+                        "python3 reproduce.py",
+                        "--match",
+                        "ORIGINAL_FAILURE",
+                        "--adapter",
+                        "pipenv",
+                        "--output",
+                        str(output),
+                    ]
+                )
+            self.assertEqual(2, exit_code)
+            self.assertIn("--adapter pipenv requires at least one Pipfile", stderr.getvalue())
 
     def test_go_adapter_runs_through_cli_and_report(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

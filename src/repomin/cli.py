@@ -43,6 +43,7 @@ from repomin.oracle import (
     clopper_pearson_lower_bound,
     exact_binomial_rate_gate,
 )
+from repomin.pipenv_manifest import PipenvManifestReducer
 from repomin.python_manifest import PythonManifestReducer
 from repomin.python_source import PythonSourceReducer
 from repomin.reducer import FileReducer
@@ -635,6 +636,7 @@ def build_parser() -> argparse.ArgumentParser:
             "maven",
             "gradle",
             "python",
+            "pipenv",
             "node",
             "composer",
             "dotnet",
@@ -1040,6 +1042,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 go_manifest = GoManifestReducer(session)
                 gradle = GradleReducer(session)
                 python_manifest = PythonManifestReducer(session)
+                pipenv = PipenvManifestReducer(session)
                 node_manifest = NodeManifestReducer(session)
                 java_reducer = JavaReducer(session, java_analysis_classpath)
                 python_source_reducer = PythonSourceReducer(session)
@@ -1052,6 +1055,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 go_manifest_applicable = go_manifest.is_applicable()
                 gradle_applicable = gradle.is_applicable()
                 python_manifest_applicable = python_manifest.is_applicable()
+                pipenv_applicable = pipenv.is_applicable()
                 node_manifest_applicable = node_manifest.is_applicable()
                 java_applicable = java_reducer.has_java_sources()
                 python_source_applicable = python_source_reducer.has_python_sources()
@@ -1065,6 +1069,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     raise ValueError(
                         "--adapter python requires pyproject.toml or requirements files"
                     )
+                if args.adapter == "pipenv" and not pipenv_applicable:
+                    raise ValueError("--adapter pipenv requires at least one Pipfile")
                 if args.adapter == "node" and not node_manifest_applicable:
                     raise ValueError(
                         "--adapter node requires at least one package.json"
@@ -1109,6 +1115,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 )
                 use_python_manifest = args.adapter == "python" or (
                     args.adapter == "auto" and python_manifest_applicable
+                )
+                use_pipenv = args.adapter == "pipenv" or (
+                    args.adapter == "auto" and pipenv_applicable
                 )
                 use_node_manifest = args.adapter == "node" or (
                     args.adapter == "auto" and node_manifest_applicable
@@ -1164,6 +1173,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     components.append(("gradle", gradle.reduce))
                 if use_python_manifest:
                     components.append(("python-manifest", python_manifest.reduce))
+                if use_pipenv:
+                    components.append(("pipenv-manifest", pipenv.reduce))
                 if use_node_manifest:
                     components.append(("node-manifest", node_manifest.reduce))
                 if use_composer:

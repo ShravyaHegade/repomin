@@ -18,7 +18,7 @@ _repomin() {
     case "$prev" in
         --backend) COMPREPLY=( $(compgen -W "host docker" -- "$cur") ); return 0 ;;
         --docker-network) COMPREPLY=( $(compgen -W "none bridge host" -- "$cur") ); return 0 ;;
-        --adapter) COMPREPLY=( $(compgen -W "auto none maven gradle python node composer dotnet ruby cargo go" -- "$cur") ); return 0 ;;
+        --adapter) COMPREPLY=( $(compgen -W "auto none maven gradle python pipenv node composer dotnet ruby cargo go" -- "$cur") ); return 0 ;;
         --source-reducer) COMPREPLY=( $(compgen -W "auto none java python" -- "$cur") ); return 0 ;;
         --semantic-reducer) COMPREPLY=( $(compgen -W "none http" -- "$cur") ); return 0 ;;
     esac
@@ -83,7 +83,7 @@ _repomin() {
         '--holdout-runs[holdout samples]:count:'
         '--min-holdout-rate[minimum holdout rate]:rate:'
         '--holdout-confidence[holdout confidence]:level:'
-        '--adapter[structured manifest reducer]:adapter:(auto none maven gradle python node composer dotnet ruby cargo go)'
+        '--adapter[structured manifest reducer]:adapter:(auto none maven gradle python pipenv node composer dotnet ruby cargo go)'
         '--source-reducer[source-level reducer]:reducer:(auto none java python)'
         '--text-file[line-reduce a UTF-8 text file]:path:_files'
         '--semantic-reducer[semantic reducer backend]:backend:(none http)'
@@ -142,7 +142,7 @@ complete -c repomin -f -l run-confidence -r
 complete -c repomin -f -l holdout-runs -r
 complete -c repomin -f -l min-holdout-rate -r
 complete -c repomin -f -l holdout-confidence -r
-complete -c repomin -f -l adapter -r -a 'auto none maven gradle python node composer dotnet ruby cargo go'
+complete -c repomin -f -l adapter -r -a 'auto none maven gradle python pipenv node composer dotnet ruby cargo go'
 complete -c repomin -f -l source-reducer -r -a 'auto none java python'
 complete -c repomin -f -l text-file -r -a '(__fish_complete_path)'
 complete -c repomin -f -l semantic-reducer -r -a 'none http'

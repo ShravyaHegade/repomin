@@ -609,6 +609,12 @@ files, follows local requirement and constraint includes within the repository,
 and treats backslash continuations atomically. Symlinked manifests and include
 targets are not followed.
 
+The Pipenv manifest reducer scans non-symlinked files named exactly `Pipfile`
+and reuses the same strict TOML lexer. It exposes direct assignments in
+`[packages]`, `[dev-packages]`, and `[requires]` as whole-statement,
+content-hashed targets. `[[source]]` settings, arbitrary tables, and
+`Pipfile.lock` remain untouched; malformed or stale ranges fail closed.
+
 The Node manifest reducer parses each valid npm-compatible `package.json` with
 its own strict JSON structure parser. It exposes dependency, development,
 optional/peer dependency, script, workspace, file/bundle, `resolutions`, and

@@ -292,6 +292,7 @@ def main() -> int:
         ("semantic-stub", _check_semantic_stub),
         ("text-lines", _check_text_lines),
         ("node-package", lambda: _check_manifest("node-package", "node", ["python3", "reproduce.py"], "package.json", ("required-sdk", "packages/required"), ("unused-sdk", "unused-test-tool"))),
+        ("pipenv-package", lambda: _check_manifest("pipenv-package", "pipenv", ["python3", "reproduce.py"], "Pipfile", ("required-package",), ("unused-package", "unused-test"))),
         ("composer-package", lambda: _check_manifest("composer-package", "composer", ["python3", "reproduce.py"], "composer.json", ("repomin/required", "autoload", "psr-4"))),
         ("dotnet-project", lambda: _check_manifest("dotnet-project", "dotnet", ["python3", "reproduce.py"], "fixture.csproj", ("PackageReference", "ProjectReference", "TargetFramework"))),
         ("ruby-gemfile", lambda: _check_manifest("ruby-gemfile", "ruby", ["ruby", "reproduce.rb"], "Gemfile", ("repomin-required",))),
