@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   property groups, imports, conditions, and arbitrary metadata preserved.
 - A network-free `dotnet-directory-build-props` benchmark and MSBuild adapter
   documentation coverage.
+- A dependency-free benchmark summary comparison tool for aligning fixture
+  status and descriptive duration trends across runs.
 - Structured Pipenv `Pipfile` reduction for direct runtime, development, and
   interpreter requirement entries, with source settings and `Pipfile.lock`
   deliberately preserved.

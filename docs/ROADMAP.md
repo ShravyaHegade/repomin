@@ -25,6 +25,8 @@ dates. Concrete contribution tasks live in
   minimized public fixtures when licensing permits.
 - Tighten benchmark report assertions and publish comparable trend summaries
   without making unsupported performance claims.
+- Keep the dependency-free `benchmarks/compare.py` summary comparison useful
+  for fixture regressions and environment-to-environment diagnostics.
 - Improve runnable Java, Python, Docker, and semantic workflow examples.
 
 ## Next: release readiness

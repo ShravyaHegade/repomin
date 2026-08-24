@@ -24,6 +24,21 @@ skips toolchain-dependent fixtures (`cargo`, `go`, `ruby`) when their command is
 absent and exits non-zero on any failure. Docker, Maven, Gradle, PHP, and .NET
 SDK fixtures are intentionally outside this runner.
 
+To compare several saved summaries, use the standard-library comparison tool:
+
+```sh
+python3 benchmarks/compare.py \
+  /tmp/repomin-benchmarks-before.json \
+  /tmp/repomin-benchmarks-after.json \
+  --json-output /tmp/repomin-benchmarks-comparison.json
+```
+
+The text output aligns fixture names across runs and shows status plus elapsed
+time. The JSON output includes per-run counts and descriptive min/median/max
+durations. Missing fixtures are shown explicitly. This is a regression and
+diagnostic aid, not a performance claim; use repeated runs in the same
+environment before drawing speed conclusions.
+
 `maven-multimodule` is a real Maven reactor containing one failing JUnit test,
 one unrelated module, an unused dependency, an unused resource, and unrelated
 documentation. Its failing Java test also contains an unused import, field,

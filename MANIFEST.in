@@ -6,6 +6,7 @@ include tests/test_*.py
 # Keep benchmark fixtures explicit. Recursive extension globs also collect
 # generated files such as nested Maven target/ reports and virtualenv sources.
 include benchmarks/README.md
+include benchmarks/compare.py
 include benchmarks/run_offline.py
 include benchmarks/docker-python/reproduce.py
 include benchmarks/docker-python/required.txt
