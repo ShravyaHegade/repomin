@@ -310,6 +310,11 @@ def _write_summary(path: Path, checks: list[dict[str, object]]) -> None:
 def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
+        "--list",
+        action="store_true",
+        help="list benchmark names without executing them",
+    )
+    parser.add_argument(
         "--json-output",
         type=Path,
         metavar="PATH",
@@ -318,9 +323,8 @@ def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
-    args = _parse_args(argv)
-    checks: list[tuple[str, Callable[[], None]]] = [
+def _checks() -> list[tuple[str, Callable[[], None]]]:
+    return [
         ("input-controls", _check_input_controls),
         ("input-controls-budget", _check_input_controls_budget),
         ("semantic-stub", _check_semantic_stub),
@@ -336,16 +340,83 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 ("repomin-unused-",),
             ),
         ),
-        ("node-package", lambda: _check_manifest("node-package", "node", ["python3", "reproduce.py"], "package.json", ("required-sdk", "packages/required"), ("unused-sdk", "unused-test-tool"))),
-        ("pipenv-package", lambda: _check_manifest("pipenv-package", "pipenv", ["python3", "reproduce.py"], "Pipfile", ("required-package",), ("unused-package", "unused-test"))),
-        ("composer-package", lambda: _check_manifest("composer-package", "composer", ["python3", "reproduce.py"], "composer.json", ("repomin/required", "autoload", "psr-4"))),
-        ("dotnet-project", lambda: _check_manifest("dotnet-project", "dotnet", ["python3", "reproduce.py"], "fixture.csproj", ("PackageReference", "ProjectReference", "TargetFramework"))),
-        ("dotnet-directory-build-props", lambda: _check_manifest("dotnet-directory-build-props", "dotnet", ["python3", "reproduce.py"], "Directory.Build.props", ("PackageReference", "ProjectReference", "TargetFramework"))),
-        ("ruby-gemfile", lambda: _check_manifest("ruby-gemfile", "ruby", ["ruby", "reproduce.rb"], "Gemfile", ("repomin-required",))),
+        (
+            "node-package",
+            lambda: _check_manifest(
+                "node-package",
+                "node",
+                ["python3", "reproduce.py"],
+                "package.json",
+                ("required-sdk", "packages/required"),
+                ("unused-sdk", "unused-test-tool"),
+            ),
+        ),
+        (
+            "pipenv-package",
+            lambda: _check_manifest(
+                "pipenv-package",
+                "pipenv",
+                ["python3", "reproduce.py"],
+                "Pipfile",
+                ("required-package",),
+                ("unused-package", "unused-test"),
+            ),
+        ),
+        (
+            "composer-package",
+            lambda: _check_manifest(
+                "composer-package",
+                "composer",
+                ["python3", "reproduce.py"],
+                "composer.json",
+                ("repomin/required", "autoload", "psr-4"),
+            ),
+        ),
+        (
+            "dotnet-project",
+            lambda: _check_manifest(
+                "dotnet-project",
+                "dotnet",
+                ["python3", "reproduce.py"],
+                "fixture.csproj",
+                ("PackageReference", "ProjectReference", "TargetFramework"),
+            ),
+        ),
+        (
+            "dotnet-directory-build-props",
+            lambda: _check_manifest(
+                "dotnet-directory-build-props",
+                "dotnet",
+                ["python3", "reproduce.py"],
+                "Directory.Build.props",
+                ("PackageReference", "ProjectReference", "TargetFramework"),
+            ),
+        ),
+        (
+            "ruby-gemfile",
+            lambda: _check_manifest(
+                "ruby-gemfile",
+                "ruby",
+                ["ruby", "reproduce.rb"],
+                "Gemfile",
+                ("repomin-required",),
+            ),
+        ),
         ("cargo-workspace", _check_cargo_workspace),
         ("go-module", _check_go_module),
         ("native-process", _check_native_process),
     ]
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    args = _parse_args(argv)
+    checks = _checks()
+    if args.list:
+        if args.json_output is not None:
+            raise SystemExit("--list cannot be combined with --json-output")
+        for name, _ in checks:
+            print(name)
+        return 0
     passed = 0
     skipped = 0
     failed = 0

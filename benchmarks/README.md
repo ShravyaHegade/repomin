@@ -6,6 +6,12 @@ Run the complete network-free set from the repository root with:
 python3 benchmarks/run_offline.py
 ```
 
+List fixture names without executing them with:
+
+```sh
+python3 benchmarks/run_offline.py --list
+```
+
 For CI or tooling that needs a stable machine-readable summary, provide an
 output path:
 

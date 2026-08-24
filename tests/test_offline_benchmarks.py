@@ -12,9 +12,23 @@ if _RUNNER_SPEC is None or _RUNNER_SPEC.loader is None:
 _RUNNER = importlib.util.module_from_spec(_RUNNER_SPEC)
 _RUNNER_SPEC.loader.exec_module(_RUNNER)
 _write_summary = _RUNNER._write_summary
+_offline_main = _RUNNER.main
 
 
 class OfflineBenchmarkSummaryTest(unittest.TestCase):
+    def test_list_mode_is_side_effect_free_and_includes_all_fixtures(self) -> None:
+        from contextlib import redirect_stdout
+        from io import StringIO
+
+        output = StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(0, _offline_main(["--list"]))
+
+        names = output.getvalue().splitlines()
+        self.assertIn("python-pyproject", names)
+        self.assertEqual(len(names), len(set(names)))
+        self.assertGreaterEqual(len(names), 10)
+
     def test_writes_versioned_counts_and_check_details(self) -> None:
         checks = [
             {
