@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   documentation coverage.
 - A dependency-free benchmark summary comparison tool for aligning fixture
   status and descriptive duration trends across runs.
+- Runnable Docker-backend and local semantic-stub workflows in the examples
+  guide, including their trust-boundary and report checks.
 - Structured Pipenv `Pipfile` reduction for direct runtime, development, and
   interpreter requirement entries, with source settings and `Pipfile.lock`
   deliberately preserved.

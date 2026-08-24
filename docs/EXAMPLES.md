@@ -1,7 +1,9 @@
 # Examples
 
-These examples are self-contained and use only Python. Run them from a scratch
-directory after installing ReproMin in editable mode.
+The host-backend examples are self-contained and use only Python. Run them from
+a scratch directory after installing ReproMin in editable mode. The Docker and
+semantic examples near the end use the repository fixtures so their trust
+boundaries and provider contract are explicit.
 
 ## Shrink a Python failure to its required files
 
@@ -117,3 +119,47 @@ repomin . \
   --keep LICENSE \
   --output ../example-kept
 ```
+
+## Run the reproduction in Docker
+
+Use the Docker backend when the reproduction needs a controlled filesystem or
+you do not want the command to run directly on the host. Images must already
+exist locally; ReproMin never pulls an image automatically. From the
+repository root, run the included fixture:
+
+```sh
+docker pull python:3.11-slim
+
+PYTHONPATH=src python3 -m repomin benchmarks/docker-python \
+  --command 'python3 reproduce.py' \
+  --match 'ORIGINAL_FAILURE: docker backend fixture(?:\r?\n|$)' \
+  --backend docker \
+  --docker-image python:3.11-slim \
+  --jobs 2 \
+  --output /tmp/repomin-docker-example
+```
+
+The output should contain only `reproduce.py`; the sibling
+`/tmp/repomin-docker-example.repomin/report.json` records the image reference,
+resolved image ID, and default `none` network policy. Docker reduces exposure
+but is not a complete security boundary. Read [SECURITY.md](../SECURITY.md)
+before running an untrusted command.
+
+## Exercise the semantic reducer with a local stub
+
+The semantic reducer is opt-in and provider-agnostic. Before connecting a real
+model, run the deterministic local stub; it starts an ephemeral
+OpenAI-compatible endpoint and still sends the proposed edit through the
+ordinary failure oracle:
+
+```sh
+python3 benchmarks/semantic-stub/run.py \
+  --output /tmp/repomin-semantic-example
+```
+
+The reduced `data.txt` should contain exactly `NEEDLE`, and the report should
+show `semantic_reducer: "http"`, at least one semantic call, and one accepted
+semantic mutation. This fixture does not contact a model or external network.
+For a real local or self-hosted endpoint, see
+[LLM_REDUCTION.md](LLM_REDUCTION.md) and keep the feature disabled unless the
+endpoint and token handling are understood.
