@@ -954,6 +954,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for extension points and project rules,
   behavior, and report/checkpoint schema.
 - [docs/LLM_REDUCTION.md](docs/LLM_REDUCTION.md) - optional semantic reducer
   seam and its provider-agnostic contract.
+- [docs/ROADMAP.md](docs/ROADMAP.md) - current priorities, future directions,
+  and explicit non-goals.
 - [benchmarks/README.md](benchmarks/README.md) - real fixtures and acceptance
   gates.
 - [CONTRIBUTING.md](CONTRIBUTING.md) - project rules and extension points.
