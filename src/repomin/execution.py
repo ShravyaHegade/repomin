@@ -633,7 +633,8 @@ def _run_process(
             if os.name == "posix":
                 gate_read, gate_write = os.pipe()
                 gate_script = (
-                    "IFS= read -r repomin_gate <&%d || exit 125\nexec \"$@\""
+                    "IFS= read -r repomin_gate < /dev/fd/%d || exit 125\n"
+                    "exec \"$@\""
                     % gate_read
                 )
                 command_argv = [
