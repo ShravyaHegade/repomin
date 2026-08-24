@@ -23,6 +23,10 @@ from repomin.model import FailureSpec
 from repomin.oracle import FailureOracle
 
 
+def _python_command(script: str) -> str:
+    return subprocess.list2cmdline([sys.executable, "-c", script])
+
+
 class ExecutionTest(unittest.TestCase):
     @unittest.skipUnless(os.name == "posix", "process-group test requires POSIX")
     def test_interrupt_terminates_the_active_process_group(self) -> None:
@@ -95,13 +99,10 @@ class ExecutionTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             marker = root / "escaped.txt"
-            command = "%s -c %s" % (
-                shlex.quote(sys.executable),
-                shlex.quote(
-                    "from pathlib import Path; "
-                    "Path(%r).write_text('ran\\n', encoding='utf-8')"
-                    % str(marker)
-                ),
+            command = _python_command(
+                "from pathlib import Path; "
+                "Path(%r).write_text('ran\\n', encoding='utf-8')"
+                % str(marker)
             )
             runner = CommandRunner(command, timeout_seconds=5)
             runner.cancel()
@@ -141,10 +142,7 @@ class ExecutionTest(unittest.TestCase):
                 "raise SystemExit(1)"
                 % (str(root), str(renamed), str(external))
             )
-            command = "%s -c %s" % (
-                shlex.quote(sys.executable),
-                shlex.quote(script),
-            )
+            command = _python_command(script)
             runner = CommandRunner(
                 command,
                 timeout_seconds=5,
@@ -183,10 +181,7 @@ class ExecutionTest(unittest.TestCase):
                 "reports.joinpath('TEST-demo.Generated.xml').write_text("
                 "%r, encoding='utf-8'); raise SystemExit(1)" % report
             )
-            command = "%s -c %s" % (
-                shlex.quote(sys.executable),
-                shlex.quote(script),
-            )
+            command = _python_command(script)
 
             result = CommandRunner(
                 command,
@@ -212,18 +207,16 @@ class ExecutionTest(unittest.TestCase):
             with self.assertRaisesRegex(RunnerError, "reparse point"):
                 _working_directory_identity(cwd)
 
+    @unittest.skipUnless(os.name == "posix", "POSIX shell command fixture")
     def test_cancellation_falls_back_when_a_cleanup_thread_cannot_start(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             started = root / "started.txt"
-            command = "%s -c %s" % (
-                shlex.quote(sys.executable),
-                shlex.quote(
-                    "import time; from pathlib import Path; "
-                    "Path(%r).write_text('started\\n', encoding='utf-8'); "
-                    "time.sleep(10)"
-                    % str(started)
-                ),
+            command = _python_command(
+                "import time; from pathlib import Path; "
+                "Path(%r).write_text('started\\n', encoding='utf-8'); "
+                "time.sleep(10)"
+                % str(started)
             )
             runner = CommandRunner(command, timeout_seconds=5)
             errors = []
@@ -558,6 +551,7 @@ time.sleep(10)
                         runner.validate()
                 self.assertIsNone(runner.resolved_image_id)
 
+    @unittest.skipUnless(os.name == "posix", "requires a POSIX executable fixture")
     def test_docker_timeout_requests_container_cleanup(self) -> None:
         script_template = """\
 #!/bin/sh
@@ -751,13 +745,10 @@ printf '%s\\n' "$*" >> "{actions}"
         capture_limit = 1024 * 1024
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            command = "%s -c %s" % (
-                shlex.quote(sys.executable),
-                shlex.quote(
-                    "import os,time; chunk=b'x' * 65536; "
-                    "\nfor _ in range(4096): os.write(1, chunk)\n"
-                    "time.sleep(10)"
-                ),
+            command = _python_command(
+                "import os,time; chunk=b'x' * 65536; "
+                "\nfor _ in range(4096): os.write(1, chunk)\n"
+                "time.sleep(10)"
             )
             runner = CommandRunner(command, timeout_seconds=5)
             with mock.patch(

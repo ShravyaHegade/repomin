@@ -158,11 +158,9 @@ final class SymbolMatrixCaller {
 
 
 def _create_java_classpath_fixture(root: Path) -> tuple:
-    dependency_name = (
-        "\u4f9d\u8d56 space:semicolon"
-        if os.name == "nt"
-        else "\u4f9d\u8d56 space:colon"
-    )
+    # A colon is a path separator on Windows, so keep the fixture portable
+    # while retaining spaces and non-ASCII characters.
+    dependency_name = "\u4f9d\u8d56 space-semicolon" if os.name == "nt" else "\u4f9d\u8d56 space:colon"
     dependency = root / dependency_name
     external_source = dependency / "src" / "external" / "ExternalValue.java"
     external_source.parent.mkdir(parents=True)

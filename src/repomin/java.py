@@ -542,9 +542,9 @@ def _hash_java_classpath_file(
     try:
         with path.open("rb") as stream:
             opened_before = os.fstat(stream.fileno())
-            if _java_classpath_stat_signature(
+            if _java_classpath_content_signature(
                 file_stat
-            ) != _java_classpath_stat_signature(opened_before):
+            ) != _java_classpath_content_signature(opened_before):
                 raise JavaReducerError(
                     "Java analysis classpath file changed while being fingerprinted: %s"
                     % path
@@ -570,7 +570,8 @@ def _hash_java_classpath_file(
         ) from exc
     expected_signature = _java_classpath_stat_signature(file_stat)
     if (
-        expected_signature != _java_classpath_stat_signature(opened_after)
+        _java_classpath_content_signature(file_stat)
+        != _java_classpath_content_signature(opened_after)
         or expected_signature != _java_classpath_stat_signature(path_after)
         or content_size != file_stat.st_size
     ):
@@ -591,6 +592,13 @@ def _java_classpath_stat_signature(value: os.stat_result) -> Tuple[int, ...]:
         value.st_mtime_ns,
         value.st_mode,
     )
+
+
+def _java_classpath_content_signature(value: os.stat_result) -> Tuple[int, ...]:
+    """Return metadata stable between Windows paths and open file handles."""
+    if os.name == "nt":
+        return (value.st_size, value.st_mtime_ns, value.st_mode)
+    return _java_classpath_stat_signature(value)
 
 
 def _parse_targets(root: Path, output: str) -> Iterable[_JavaRecord]:

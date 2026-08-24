@@ -12,6 +12,11 @@ from repomin.python_source import (
 from repomin.session import ReductionSession
 
 
+def _write_text(path: Path, text: str) -> None:
+    with path.open("w", encoding="utf-8", newline="") as stream:
+        stream.write(text)
+
+
 SOURCE = '''\
 from pathlib import Path
 import json
@@ -51,8 +56,8 @@ class PythonSourceReducerTest(unittest.TestCase):
         root = Path(temporary.name)
         source = root / "source"
         source.mkdir()
-        (source / "reproduce.py").write_text(SOURCE, encoding="utf-8")
-        (source / "required.txt").write_text("keep\n", encoding="utf-8")
+        _write_text(source / "reproduce.py", SOURCE)
+        _write_text(source / "required.txt", "keep\n")
         oracle = FailureOracle(
             CommandRunner("python3 reproduce.py", timeout_seconds=5),
             FailureSpec("ORIGINAL_FAILURE"),
@@ -89,10 +94,10 @@ class PythonSourceReducerTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             path = root / "fixture.py"
-            path.write_text(
+            _write_text(
+                path,
                 "def mark(fn):\n    return fn\n\n"
                 "@mark\ndef unused():\n    return 1\n",
-                encoding="utf-8",
             )
 
             target = next(
@@ -108,10 +113,10 @@ class PythonSourceReducerTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             path = root / "fixture.py"
-            path.write_text(
+            _write_text(
+                path,
                 'title = "中文标题"\n\n'
                 "def unused():\n    return 1\n",
-                encoding="utf-8",
             )
             target = next(
                 item for item in _discover_targets(root) if item.label == "unused"
@@ -119,10 +124,10 @@ class PythonSourceReducerTest(unittest.TestCase):
             self.assertTrue(_remove_target(root, target))
             self.assertEqual('title = "中文标题"\n\n', path.read_text(encoding="utf-8"))
 
-            path.write_text(
+            _write_text(
+                path,
                 "# shifted\n" + 'title = "中文标题"\n\n'
                 "def unused():\n    return 1\n",
-                encoding="utf-8",
             )
             self.assertFalse(_remove_target(root, target))
 

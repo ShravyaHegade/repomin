@@ -21,6 +21,13 @@ from repomin.oracle import (
 )
 
 
+def _python_command(script: str) -> str:
+    import subprocess
+    import sys
+
+    return subprocess.list2cmdline([sys.executable, "-c", script])
+
+
 class FailureOracleTest(unittest.TestCase):
     def test_candidate_family_harmonic_alpha_spending_is_conservative(self) -> None:
         confidence = 0.8
@@ -307,7 +314,9 @@ class FailureOracleTest(unittest.TestCase):
     def test_accepts_only_matching_nonzero_failure(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             runner = CommandRunner(
-                "python3 -c \"import sys; print('ORIGINAL_FAILURE'); sys.exit(7)\"",
+                _python_command(
+                    "import sys; print('ORIGINAL_FAILURE'); sys.exit(7)"
+                ),
                 timeout_seconds=5,
             )
             oracle = FailureOracle(runner, FailureSpec("ORIGINAL_FAILURE"))

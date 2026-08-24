@@ -1823,6 +1823,7 @@ class CliTest(unittest.TestCase):
                 execution["working_directory_basename"],
             )
 
+    @unittest.skipUnless(os.name == "posix", "requires POSIX process signals")
     def test_certified_resume_exports_a_basename_sensitive_host_reproduction(
         self,
     ) -> None:

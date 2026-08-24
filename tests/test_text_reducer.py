@@ -11,11 +11,16 @@ from repomin.text_reducer import (
 )
 
 
+def _write_text(path: Path, text: str) -> None:
+    with path.open("w", encoding="utf-8", newline="") as stream:
+        stream.write(text)
+
+
 class TextReducerDiscoveryTest(unittest.TestCase):
     def test_discover_targets_produces_ordered_non_overlapping_lines(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "data.txt").write_text("alpha\nbeta\ngamma\n", encoding="utf-8")
+            _write_text(root / "data.txt", "alpha\nbeta\ngamma\n")
             targets = _discover_targets(root, ["data.txt"])
             self.assertEqual(3, len(targets))
             self.assertEqual([0, 6, 11], [target.start for target in targets])
@@ -31,7 +36,7 @@ class TextReducerDiscoveryTest(unittest.TestCase):
     def test_discover_targets_skips_missing_binary_and_symlink(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "data.txt").write_text("a\nb\n", encoding="utf-8")
+            _write_text(root / "data.txt", "a\nb\n")
             (root / "binary.dat").write_bytes(b"\xff\xfe\xfa")
             self.assertEqual(2, len(_discover_targets(root, ["data.txt", "missing.txt", "binary.dat"])))
 
