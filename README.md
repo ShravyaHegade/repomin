@@ -24,6 +24,23 @@ files, modules, build manifests, dependencies, and source symbols.
 
 ReproMin requires Python 3.9 or newer and has no runtime dependencies.
 
+## Install
+
+The current pre-alpha release is distributed from GitHub, not PyPI yet:
+
+```sh
+python3 -m pip install \
+  https://github.com/fly1d/repomin/releases/download/v0.1.0.dev1/repomin-0.1.0.dev1-py3-none-any.whl
+```
+
+For development, clone the repository and install it in editable mode:
+
+```sh
+git clone https://github.com/fly1d/repomin.git
+cd repomin
+python3 -m pip install -e .
+```
+
 ```sh
 python3 -m venv .venv
 . .venv/bin/activate
