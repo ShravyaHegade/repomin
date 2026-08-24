@@ -688,6 +688,12 @@ def _run_process(
                 gate_write = None
                 try:
                     os.write(descriptor, b"start\n")
+                except BrokenPipeError:
+                    # The child closed the gate before activation (it already
+                    # exited). Treat this as a failed run rather than an
+                    # unhandled exception; the collection loop below will read
+                    # the child's exit status.
+                    pass
                 finally:
                     os.close(descriptor)
 
