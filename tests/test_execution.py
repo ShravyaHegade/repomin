@@ -1,4 +1,5 @@
 import os
+import base64
 import shlex
 import signal
 import stat
@@ -24,7 +25,11 @@ from repomin.oracle import FailureOracle
 
 
 def _python_command(script: str) -> str:
-    return subprocess.list2cmdline([sys.executable, "-c", script])
+    if os.name != "nt":
+        return subprocess.list2cmdline([sys.executable, "-c", script])
+    encoded = base64.b64encode(script.encode("utf-8")).decode("ascii")
+    code = "import base64; exec(base64.b64decode('%s'))" % encoded
+    return '"%s" -c "%s"' % (sys.executable, code)
 
 
 class ExecutionTest(unittest.TestCase):

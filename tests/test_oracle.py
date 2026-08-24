@@ -1,4 +1,8 @@
 import math
+import base64
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from fractions import Fraction
@@ -22,10 +26,11 @@ from repomin.oracle import (
 
 
 def _python_command(script: str) -> str:
-    import subprocess
-    import sys
-
-    return subprocess.list2cmdline([sys.executable, "-c", script])
+    if os.name != "nt":
+        return subprocess.list2cmdline([sys.executable, "-c", script])
+    encoded = base64.b64encode(script.encode("utf-8")).decode("ascii")
+    code = "import base64; exec(base64.b64decode('%s'))" % encoded
+    return '"%s" -c "%s"' % (sys.executable, code)
 
 
 class FailureOracleTest(unittest.TestCase):
