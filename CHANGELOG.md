@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   status and descriptive duration trends across runs.
 - Runnable Docker-backend and local semantic-stub workflows in the examples
   guide, including their trust-boundary and report checks.
+- A documented Docker-only FastAPI dependency-regression fixture with an
+  end-to-end reducer command and expected minimized payload.
 - Structured Pipenv `Pipfile` reduction for direct runtime, development, and
   interpreter requirement entries, with source settings and `Pipfile.lock`
   deliberately preserved.

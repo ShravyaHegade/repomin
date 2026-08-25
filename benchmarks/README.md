@@ -42,6 +42,11 @@ skips toolchain-dependent fixtures (`cargo`, `go`, `ruby`) when their command is
 absent and exits non-zero on any failure. Docker, Maven, Gradle, PHP, and .NET
 SDK fixtures are intentionally outside this runner.
 
+The `python-fastapi` fixture is a Docker-only integration example. It exercises
+the Python manifest reducer against a pinned FastAPI/pytest image and is
+documented in [its README](python-fastapi/README.md); it is intentionally kept
+outside the network-free runner.
+
 To compare several saved summaries, use the standard-library comparison tool:
 
 ```sh

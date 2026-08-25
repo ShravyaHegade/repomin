@@ -145,6 +145,31 @@ resolved image ID, and default `none` network policy. Docker reduces exposure
 but is not a complete security boundary. Read [SECURITY.md](../SECURITY.md)
 before running an untrusted command.
 
+## Reduce a FastAPI dependency regression
+
+The FastAPI fixture demonstrates a more realistic Docker workflow in which the
+same runtime dependency is declared in several Python metadata files:
+
+```sh
+docker build -t repomin-fastapi-fixture benchmarks/python-fastapi
+
+PYTHONPATH=src python3 -m repomin benchmarks/python-fastapi \
+  --command 'python -m pytest -q' \
+  --match 'FastAPI route regression: dependency override leaked' \
+  --backend docker \
+  --docker-image repomin-fastapi-fixture \
+  --adapter python \
+  --source-reducer none \
+  --output /tmp/repomin-fastapi-example
+```
+
+The reduced project keeps the route regression and the dependency declarations
+that cause it, while dropping unrelated test and manifest entries. The report
+is in `/tmp/repomin-fastapi-example.repomin/report.json`; the Docker image must
+already be available locally and Docker networking is disabled by default.
+See [the fixture notes](../benchmarks/python-fastapi/README.md) for its oracle
+contract and expected payload.
+
 ## Exercise the semantic reducer with a local stub
 
 The semantic reducer is opt-in and provider-agnostic. Before connecting a real

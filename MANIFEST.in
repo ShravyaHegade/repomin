@@ -79,6 +79,7 @@ include benchmarks/input-controls/nested/deep-noise.txt
 include benchmarks/input-controls/ignored-dir/.gitignore
 include benchmarks/input-controls/ignored-dir/deep-keep.txt
 include benchmarks/python-fastapi/Dockerfile
+include benchmarks/python-fastapi/README.md
 include benchmarks/python-fastapi/constraints.txt
 include benchmarks/python-fastapi/pyproject.toml
 include benchmarks/python-fastapi/requirements.txt
