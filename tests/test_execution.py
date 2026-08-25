@@ -276,7 +276,10 @@ time.sleep(10)
             (root / "parent.py").write_text(parent_script, encoding="utf-8")
             command = "%s parent.py" % shlex.quote(sys.executable)
 
-            result = CommandRunner(command, timeout_seconds=0.1).run(root)
+            # macOS CI can spend more than 100ms starting a fresh Python
+            # interpreter; leave enough time for the parent to flush its
+            # startup marker while still timing out before the child writes.
+            result = CommandRunner(command, timeout_seconds=0.5).run(root)
             time.sleep(0.8)
 
             self.assertTrue(result.timed_out)
