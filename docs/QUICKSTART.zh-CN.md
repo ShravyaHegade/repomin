@@ -58,6 +58,27 @@ grep -n 'keep-me' "$demo_dir/reduced/input.txt"
 cat "$demo_dir/reduced.repomin/REPOMIN.md"
 ```
 
+## 验证证据报告
+
+可以在不重新执行失败命令的情况下，验证刚才生成的报告和缩减目录：
+
+```sh
+repomin report validate "$demo_dir/reduced.repomin/report.json" \
+  --payload "$demo_dir/reduced"
+```
+
+`--payload` 会在报告包含指纹时检查缩减目录是否仍与已记录的证据一致。脚本或 CI
+也可以使用机器可读的结果：
+
+```sh
+repomin report validate "$demo_dir/reduced.repomin/report.json" \
+  --payload "$demo_dir/reduced" --json
+```
+
+验证器检查报告结构、阶段和 holdout 统计，以及可用的 payload 指纹；它不会重新运行
+`--command`，也不等于证明代码或失败根因的正确性。报告格式错误、统计不一致或指纹不匹配
+时，命令以退出码 `2` 结束。
+
 ## Oracle 是什么
 
 `--command` 是失败复现命令，`--match` 是必须继续出现在 stdout 或 stderr 中的正则表达式。上面的示例要求命令继续输出 `ORIGINAL_FAILURE` 并以非零状态退出。
