@@ -247,6 +247,14 @@ class CliTest(unittest.TestCase):
                 self.assertEqual(0, exit_code)
                 self.assertIn(marker, stdout.getvalue())
                 self.assertIn("pipenv", stdout.getvalue())
+                self.assertIn("report", stdout.getvalue())
+                self.assertIn("validate", stdout.getvalue())
+                if shell == "fish":
+                    self.assertIn("-l payload", stdout.getvalue())
+                    self.assertIn("-l json", stdout.getvalue())
+                else:
+                    self.assertIn("--payload", stdout.getvalue())
+                    self.assertIn("--json", stdout.getvalue())
                 if shell == "powershell":
                     self.assertIn("CompletionResult", stdout.getvalue())
                     self.assertIn("--adapter", stdout.getvalue())

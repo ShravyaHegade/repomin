@@ -13,6 +13,30 @@ _repomin() {
     local cur prev options value_options
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
+    if [[ "${COMP_WORDS[1]}" == "report" ]]; then
+        if (( COMP_CWORD == 2 )); then
+            COMPREPLY=( $(compgen -W "validate --help" -- "$cur") )
+            return 0
+        fi
+        if [[ "${COMP_WORDS[2]}" == "validate" ]]; then
+            options="--help --payload --json"
+            value_options="--payload"
+            if [[ " $value_options " == *" $prev "* ]]; then
+                COMPREPLY=( $(compgen -f -- "$cur") )
+                return 0
+            fi
+            if [[ "$cur" == -* ]]; then
+                COMPREPLY=( $(compgen -W "$options" -- "$cur") )
+            else
+                COMPREPLY=( $(compgen -f -- "$cur") )
+            fi
+            return 0
+        fi
+    fi
+    if (( COMP_CWORD == 1 )); then
+        COMPREPLY=( $(compgen -W "completion report" -- "$cur") )
+        return 0
+    fi
     options="--version --help --command --match --exit-code --output --session --resume --timeout --backend --docker-image --docker-network --docker-cpus --docker-memory --docker-pids-limit --docker-tmpfs-size --docker-workspace-limit --jobs --no-cache --max-attempts --max-duration --ignore --ignore-path --gitignore --gitignore-file --gitignore-recursive --keep --env --java-exception --python-exception --process-failure --baseline-runs --min-baseline-passes --candidate-runs --min-candidate-passes --min-baseline-rate --min-candidate-rate --confidence --run-confidence --holdout-runs --min-holdout-rate --holdout-confidence --adapter --source-reducer --text-file --semantic-reducer --semantic-endpoint --semantic-model --semantic-timeout --java-classpath --verbose"
     value_options="--command --match --exit-code --output --session --timeout --backend --docker-image --docker-network --docker-cpus --docker-memory --docker-pids-limit --docker-tmpfs-size --docker-workspace-limit --jobs --max-attempts --max-duration --ignore --ignore-path --gitignore-file --keep --env --baseline-runs --min-baseline-passes --candidate-runs --min-candidate-passes --min-baseline-rate --min-candidate-rate --confidence --run-confidence --holdout-runs --min-holdout-rate --holdout-confidence --adapter --source-reducer --text-file --semantic-reducer --semantic-endpoint --semantic-model --semantic-timeout --java-classpath"
     case "$prev" in
@@ -40,7 +64,22 @@ _ZSH = r'''#compdef repomin
 
 _repomin() {
     local -a options
+    if [[ "$words[2]" == "report" ]]; then
+        if [[ "$words[3]" == "validate" ]]; then
+            _arguments -s \
+                '1:report:_files' \
+                '--help[show report validation help]' \
+                '--payload[exported payload directory]:directory:_files -/' \
+                '--json[print a machine-readable result]'
+        else
+            _arguments -s '1:report command:(validate)' '--help[show report help]'
+        fi
+        return
+    fi
     options=(
+        '1:repository:_files'
+        'report[inspect or validate a report]'
+        'completion[print a shell completion script]'
         '--version[show the installed version]'
         '--help[show command help]'
         '--command[failure reproduction command]:command:'
@@ -101,8 +140,11 @@ _repomin "$@"
 
 
 _FISH = r'''# Fish completion for repomin.
-complete -c repomin -f -n '__fish_use_subcommand' -a completion -d 'print shell completion script'
+complete -c repomin -f -n '__fish_use_subcommand' -a 'completion report' -d 'command'
 complete -c repomin -f -n '__fish_seen_subcommand_from completion' -a 'bash zsh fish' -d 'shell'
+complete -c repomin -f -n '__fish_seen_subcommand_from report' -a validate -d 'validate a report'
+complete -c repomin -f -n '__fish_seen_subcommand_from report; and __fish_seen_subcommand_from validate' -l payload -r -a '(__fish_complete_directories)' -d 'exported payload directory'
+complete -c repomin -f -n '__fish_seen_subcommand_from report; and __fish_seen_subcommand_from validate' -l json -d 'print a machine-readable result'
 
 set -l boolean_options version help resume no-cache gitignore gitignore-recursive java-exception python-exception process-failure verbose
 for option in $boolean_options
@@ -158,6 +200,7 @@ Register-ArgumentCompleter -Native -CommandName repomin -ScriptBlock {
     param($wordToComplete, $commandAst, $cursorPosition)
 
     $options = @(
+        'report', 'completion',
         '--version', '--help', '--command', '--match', '--exit-code', '--output',
         '--session', '--resume', '--timeout', '--backend', '--docker-image',
         '--docker-network', '--docker-cpus', '--docker-memory',
@@ -173,6 +216,9 @@ Register-ArgumentCompleter -Native -CommandName repomin -ScriptBlock {
         '--semantic-endpoint', '--semantic-model', '--semantic-timeout',
         '--java-classpath', '--verbose'
     )
+    $reportOptions = @('validate', '--help')
+    $reportValidateOptions = @('--help', '--payload', '--json')
+    $reportPathOptions = @('--payload')
     $valueOptions = @(
         '--command', '--match', '--exit-code', '--output', '--session', '--timeout',
         '--backend', '--docker-image', '--docker-network', '--docker-cpus',
@@ -203,6 +249,46 @@ Register-ArgumentCompleter -Native -CommandName repomin -ScriptBlock {
         $elements[$elements.Count - 2].Extent.Text
     } else {
         ''
+    }
+    $reportMode = $elements | Where-Object { $_.Extent.Text -eq 'report' }
+    if ($reportMode) {
+        $validateMode = $elements | Where-Object { $_.Extent.Text -eq 'validate' }
+        if (-not $validateMode) {
+            $reportOptions |
+                Where-Object { $_ -like "$wordToComplete*" } |
+                ForEach-Object {
+                    [System.Management.Automation.CompletionResult]::new(
+                        $_, $_, 'Command', $_
+                    )
+                }
+            return
+        }
+        if ($reportPathOptions -contains $previous) {
+            $pathPattern = if ([string]::IsNullOrEmpty($wordToComplete)) {
+                '*'
+            } else {
+                "$wordToComplete*"
+            }
+            Get-ChildItem -Path $pathPattern -Force -ErrorAction SilentlyContinue |
+                ForEach-Object {
+                    $completionText = $_.FullName
+                    if ($_.PSIsContainer) {
+                        $completionText += [System.IO.Path]::DirectorySeparatorChar
+                    }
+                    [System.Management.Automation.CompletionResult]::new(
+                        $completionText, $_.Name, 'ProviderItem', $_.FullName
+                    )
+                }
+            return
+        }
+        $reportValidateOptions |
+            Where-Object { $_ -like "$wordToComplete*" } |
+            ForEach-Object {
+                [System.Management.Automation.CompletionResult]::new(
+                    $_, $_, 'ParameterName', $_
+                )
+            }
+        return
     }
     if ($enumValues.ContainsKey($previous)) {
         $enumValues[$previous] |
