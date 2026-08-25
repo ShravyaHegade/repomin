@@ -985,6 +985,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for extension points and project rules,
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - core invariants, reducer
   behavior, and report/checkpoint schema.
+- [docs/REPORT_SCHEMA.md](docs/REPORT_SCHEMA.md) - versioned `report.json`
+  fields, accounting identities, holdout evidence, and consumer guidance.
 - [docs/LLM_REDUCTION.md](docs/LLM_REDUCTION.md) - optional semantic reducer
   seam and its provider-agnostic contract.
 - [docs/ROADMAP.md](docs/ROADMAP.md) - current priorities, future directions,

@@ -1,5 +1,9 @@
 # Architecture
 
+The machine-readable report fields are catalogued separately in
+[REPORT_SCHEMA.md](REPORT_SCHEMA.md). This document focuses on the invariants
+and decision contracts that produce those fields.
+
 ReproMin treats reduction as a sequence of transactions guarded by a failure
 oracle.
 
