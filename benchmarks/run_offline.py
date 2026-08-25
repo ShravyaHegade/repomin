@@ -287,7 +287,13 @@ class _Skipped(Exception):
     pass
 
 
-def _write_summary(path: Path, checks: list[dict[str, object]]) -> None:
+def _write_summary(
+    path: Path,
+    checks: list[dict[str, object]],
+    *,
+    only: Sequence[str] = (),
+    exclude: Sequence[str] = (),
+) -> None:
     counts = {
         "passed": sum(item["status"] == "passed" for item in checks),
         "skipped": sum(item["status"] == "skipped" for item in checks),
@@ -299,6 +305,11 @@ def _write_summary(path: Path, checks: list[dict[str, object]]) -> None:
         "platform": sys.platform,
         **counts,
         "checks": checks,
+        "selection": {
+            "only": list(only),
+            "exclude": list(exclude),
+            "selected": [str(item["name"]) for item in checks],
+        },
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -500,7 +511,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             print("FAIL %s: %s" % (name, exc))
     if args.json_output is not None:
         try:
-            _write_summary(args.json_output, results)
+            _write_summary(
+                args.json_output,
+                results,
+                only=args.only,
+                exclude=args.exclude,
+            )
         except OSError as exc:
             print("could not write benchmark JSON: %s" % exc, file=sys.stderr)
             failed += 1

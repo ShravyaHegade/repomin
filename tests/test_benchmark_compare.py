@@ -27,6 +27,11 @@ def _write(directory: Path, name: str, checks: list[dict[str, object]]) -> Path:
                 "platform": "test",
                 **counts,
                 "checks": checks,
+                "selection": {
+                    "only": [],
+                    "exclude": [],
+                    "selected": [check["name"] for check in checks],
+                },
             }
         ),
         encoding="utf-8",
@@ -67,6 +72,7 @@ class BenchmarkCompareTest(unittest.TestCase):
         beta = comparison["checks"][1]
         self.assertIsNone(beta["runs"][1])
         self.assertEqual(1.2, comparison["runs"][0]["duration_seconds"])
+        self.assertEqual([], comparison["runs"][0]["selection"]["only"])
 
     def test_rejects_duplicate_checks_and_inconsistent_counts(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -111,6 +117,31 @@ class BenchmarkCompareTest(unittest.TestCase):
             )
             with self.assertRaises(_MODULE.SummaryError):
                 _MODULE.compare_summaries([nonfinite])
+
+    def test_rejects_inconsistent_selection_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "invalid.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "passed": 1,
+                        "skipped": 0,
+                        "failed": 0,
+                        "checks": [
+                            {"name": "alpha", "status": "passed", "duration_seconds": 0}
+                        ],
+                        "selection": {
+                            "only": [],
+                            "exclude": [],
+                            "selected": ["different"],
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaises(_MODULE.SummaryError):
+                _MODULE.compare_summaries([path])
 
     def test_text_output_is_explicitly_descriptive(self) -> None:
         comparison = {

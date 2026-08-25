@@ -72,12 +72,35 @@ def _check_by_name(summary: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
     return {check["name"]: check for check in summary["checks"]}
 
 
+def _selection(summary: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    selection = summary.get("selection")
+    if selection is None:
+        return None
+    if not isinstance(selection, dict):
+        raise SummaryError("selection must be a JSON object")
+    for field in ("only", "exclude", "selected"):
+        values = selection.get(field)
+        if not isinstance(values, list) or any(
+            not isinstance(value, str) or not value for value in values
+        ):
+            raise SummaryError("selection %s must be a string array" % field)
+        if len(values) != len(set(values)):
+            raise SummaryError("selection %s contains duplicates" % field)
+    check_names = {check["name"] for check in summary["checks"]}
+    if set(selection["selected"]) != check_names:
+        raise SummaryError("selection selected names do not match checks")
+    if set(selection["only"]) & set(selection["exclude"]):
+        raise SummaryError("selection name cannot be both only and exclude")
+    return selection
+
+
 def compare_summaries(paths: Iterable[Path]) -> dict[str, Any]:
     """Build a deterministic descriptive comparison for summary files."""
     inputs = list(paths)
     if not inputs:
         raise SummaryError("at least one summary path is required")
     summaries = [load_summary(path) for path in inputs]
+    selections = [_selection(summary) for summary in summaries]
     by_name = [_check_by_name(summary) for summary in summaries]
     names = sorted({name for checks in by_name for name in checks})
 
@@ -94,6 +117,7 @@ def compare_summaries(paths: Iterable[Path]) -> dict[str, Any]:
                 "skipped": summary["skipped"],
                 "failed": summary["failed"],
                 "duration_seconds": round(duration, 3),
+                "selection": selections[len(runs)],
             }
         )
 

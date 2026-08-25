@@ -34,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   executing the benchmark suite.
 - Repeatable `--only` and `--exclude` filters for running a focused benchmark
   subset with strict unknown-name and empty-selection validation.
+- Benchmark JSON summaries now record the exact filters and selected fixture
+  names, and comparison output preserves that selection metadata.
 - Optional machine-readable offline benchmark summaries with per-fixture status
   and elapsed time, uploaded as a CI artifact.
 - `repomin completion bash|zsh|fish` for shell-native option, enum, and path

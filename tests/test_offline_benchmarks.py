@@ -56,6 +56,18 @@ class OfflineBenchmarkSummaryTest(unittest.TestCase):
         self.assertEqual(checks, data["checks"])
         self.assertIn("python", data)
         self.assertIn("platform", data)
+        self.assertEqual(
+            {"only": [], "exclude": [], "selected": ["required", "optional-tool"]},
+            data["selection"],
+        )
+
+        selected_path = path.with_name("selected.json")
+        _write_summary(selected_path, checks[:1], only=("required",), exclude=("optional-tool",))
+        selected = json.loads(selected_path.read_text(encoding="utf-8"))
+        self.assertEqual(
+            {"only": ["required"], "exclude": ["optional-tool"], "selected": ["required"]},
+            selected["selection"],
+        )
 
     def test_select_checks_supports_only_and_exclude(self) -> None:
         checks = [("first", lambda: None), ("second", lambda: None), ("third", lambda: None)]
