@@ -285,6 +285,11 @@ Run the test suite with:
 PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```
 
+If pytest is already available in your development environment, the shorter
+`pytest -q` command is also supported. The repository configuration limits
+collection to `tests/` and adds the `src/` layout automatically; benchmark
+fixture tests are intentionally run through `benchmarks/run_offline.py`.
+
 To inspect branch coverage locally, install the CI-only coverage tool and run:
 
 ```sh

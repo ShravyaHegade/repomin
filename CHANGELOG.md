@@ -51,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Added pytest configuration for the `src/` layout and repository test boundary,
+  so `pytest -q` does not collect benchmark fixture tests accidentally.
 - Refreshed the contributor roadmap and published scoped good-first issues for
   PowerShell completion, a Chinese quick start, and shared MSBuild props.
 - Updated GitHub Actions to their Node.js 24-based major versions.
