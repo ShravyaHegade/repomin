@@ -231,6 +231,18 @@ class CliTest(unittest.TestCase):
             self.assertIn("check --keep docs/LICENSE", stderr.getvalue())
 
     def test_shell_completion_scripts_are_available(self) -> None:
+        parser_options = {
+            option
+            for action in build_parser()._actions
+            for option in action.option_strings
+            if option.startswith("--")
+        }
+        fish_boolean_options = {
+            option
+            for action in build_parser()._actions
+            for option in action.option_strings
+            if option.startswith("--") and action.nargs == 0
+        }
         for shell, marker in (
             ("bash", "complete -F _repomin repomin"),
             ("zsh", "#compdef repomin"),
@@ -249,6 +261,14 @@ class CliTest(unittest.TestCase):
                 self.assertIn("pipenv", stdout.getvalue())
                 self.assertIn("report", stdout.getvalue())
                 self.assertIn("validate", stdout.getvalue())
+                for option in sorted(parser_options):
+                    with self.subTest(shell=shell, option=option):
+                        expected = (
+                            option[2:]
+                            if shell == "fish" and option in fish_boolean_options
+                            else ("-l " + option[2:] if shell == "fish" else option)
+                        )
+                        self.assertIn(expected, stdout.getvalue())
                 if shell == "fish":
                     self.assertIn("-l payload", stdout.getvalue())
                     self.assertIn("-l json", stdout.getvalue())
