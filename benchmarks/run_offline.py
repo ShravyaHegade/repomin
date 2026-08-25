@@ -320,6 +320,20 @@ def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
         metavar="PATH",
         help="write a machine-readable result summary to PATH",
     )
+    parser.add_argument(
+        "--only",
+        action="append",
+        default=[],
+        metavar="NAME",
+        help="run only the named benchmark (repeatable)",
+    )
+    parser.add_argument(
+        "--exclude",
+        action="append",
+        default=[],
+        metavar="NAME",
+        help="skip the named benchmark (repeatable)",
+    )
     return parser.parse_args(argv)
 
 
@@ -408,6 +422,33 @@ def _checks() -> list[tuple[str, Callable[[], None]]]:
     ]
 
 
+def _select_checks(
+    checks: list[tuple[str, Callable[[], None]]],
+    only: Sequence[str],
+    exclude: Sequence[str],
+) -> list[tuple[str, Callable[[], None]]]:
+    available = {name for name, _ in checks}
+    unknown = sorted((set(only) | set(exclude)) - available)
+    if unknown:
+        raise SystemExit("unknown benchmark name(s): %s" % ", ".join(unknown))
+    overlap = sorted(set(only) & set(exclude))
+    if overlap:
+        raise SystemExit(
+            "benchmark name(s) cannot be both --only and --exclude: %s"
+            % ", ".join(overlap)
+        )
+    excluded = set(exclude)
+    selected = set(only) if only else available
+    filtered = [
+        (name, check)
+        for name, check in checks
+        if name in selected and name not in excluded
+    ]
+    if not filtered:
+        raise SystemExit("benchmark selection is empty")
+    return filtered
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = _parse_args(argv)
     checks = _checks()
@@ -417,6 +458,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         for name, _ in checks:
             print(name)
         return 0
+    checks = _select_checks(checks, args.only, args.exclude)
     passed = 0
     skipped = 0
     failed = 0

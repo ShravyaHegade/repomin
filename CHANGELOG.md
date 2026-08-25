@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   declaration forms in `pyproject.toml`.
 - A `benchmarks/run_offline.py --list` mode for discovering fixtures without
   executing the benchmark suite.
+- Repeatable `--only` and `--exclude` filters for running a focused benchmark
+  subset with strict unknown-name and empty-selection validation.
 - Optional machine-readable offline benchmark summaries with per-fixture status
   and elapsed time, uploaded as a CI artifact.
 - `repomin completion bash|zsh|fish` for shell-native option, enum, and path

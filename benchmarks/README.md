@@ -12,6 +12,16 @@ List fixture names without executing them with:
 python3 benchmarks/run_offline.py --list
 ```
 
+During fixture development, run a focused subset with repeatable exact names:
+
+```sh
+python3 benchmarks/run_offline.py --only python-pyproject --only text-lines
+python3 benchmarks/run_offline.py --exclude native-process
+```
+
+Unknown names and a name supplied to both `--only` and `--exclude` are rejected.
+Without filters, every benchmark runs as usual.
+
 For CI or tooling that needs a stable machine-readable summary, provide an
 output path:
 

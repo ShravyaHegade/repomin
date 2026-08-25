@@ -13,6 +13,7 @@ _RUNNER = importlib.util.module_from_spec(_RUNNER_SPEC)
 _RUNNER_SPEC.loader.exec_module(_RUNNER)
 _write_summary = _RUNNER._write_summary
 _offline_main = _RUNNER.main
+_select_checks = _RUNNER._select_checks
 
 
 class OfflineBenchmarkSummaryTest(unittest.TestCase):
@@ -55,6 +56,24 @@ class OfflineBenchmarkSummaryTest(unittest.TestCase):
         self.assertEqual(checks, data["checks"])
         self.assertIn("python", data)
         self.assertIn("platform", data)
+
+    def test_select_checks_supports_only_and_exclude(self) -> None:
+        checks = [("first", lambda: None), ("second", lambda: None), ("third", lambda: None)]
+
+        selected = _select_checks(checks, ["third", "first"], [])
+        self.assertEqual(["first", "third"], [name for name, _ in selected])
+
+        selected = _select_checks(checks, [], ["second"])
+        self.assertEqual(["first", "third"], [name for name, _ in selected])
+
+    def test_select_checks_rejects_unknown_and_conflicting_names(self) -> None:
+        checks = [("first", lambda: None)]
+        with self.assertRaises(SystemExit):
+            _select_checks(checks, ["missing"], [])
+        with self.assertRaises(SystemExit):
+            _select_checks(checks, ["first"], ["first"])
+        with self.assertRaises(SystemExit):
+            _select_checks(checks, [], ["first"])
 
 
 if __name__ == "__main__":
