@@ -58,6 +58,26 @@ def _report() -> dict:
 
 
 class ReportValidationTest(unittest.TestCase):
+    def test_rejects_malformed_events(self) -> None:
+        report = _report()
+        report.pop("events")
+        with self.assertRaisesRegex(ReportValidationError, "events must be an array"):
+            validate_report_document(report)
+        report = _report()
+        report["events"] = [{"phase": "files"}]
+        with self.assertRaisesRegex(ReportValidationError, "description"):
+            validate_report_document(report)
+        report = _report()
+        report["events"] = [{
+            'phase': 'files',
+            'description': 'remove file',
+            'duration_seconds': 0.1,
+            'oracle_runs': 1,
+            'oracle_passes': 2,
+        }]
+        with self.assertRaisesRegex(ReportValidationError, "exceed runs"):
+            validate_report_document(report)
+
     def test_reproduction_markdown_uses_longer_fence_for_backticks(self) -> None:
         result = ReductionResult(
             output=Path("reduced"),

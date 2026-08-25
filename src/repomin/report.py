@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 from pathlib import Path
 from typing import Dict, Optional, Tuple
@@ -93,6 +94,24 @@ def validate_report_document(report: object) -> Dict[str, object]:
             raise ReportValidationError(
                 "phase accepted count does not equal report accepted_mutations"
             )
+
+    events = report.get("events")
+    if not isinstance(events, list):
+        raise ReportValidationError("events must be an array")
+    for index, event in enumerate(events):
+        if not isinstance(event, dict):
+            raise ReportValidationError("event %d must be an object" % index)
+        _require_text(event, "phase", non_empty=True)
+        _require_text(event, "description", non_empty=True)
+        _require_nonnegative_number(event, "duration_seconds", "event %d" % index)
+        oracle_runs = _require_nonnegative_int(
+            event, "oracle_runs", "event %d" % index
+        )
+        oracle_passes = _require_nonnegative_int(
+            event, "oracle_passes", "event %d" % index
+        )
+        if oracle_passes > oracle_runs:
+            raise ReportValidationError("event oracle passes exceed runs")
 
     holdout = _require_object(report, "holdout_certification")
     status = _require_text(holdout, "status", non_empty=True)
@@ -230,6 +249,21 @@ def _require_positive_int(
         prefix = (context + ".") if context else ""
         raise ReportValidationError("%s%s must be positive" % (prefix, name))
     return value
+
+
+def _require_nonnegative_number(
+    parent: Dict[str, object], name: str, context: str = ""
+) -> float:
+    value = parent.get(name)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        prefix = (context + ".") if context else ""
+        raise ReportValidationError("%s%s must be a number" % (prefix, name))
+    if not math.isfinite(float(value)) or value < 0:
+        prefix = (context + ".") if context else ""
+        raise ReportValidationError(
+            "%s%s must be finite and non-negative" % (prefix, name)
+        )
+    return float(value)
 
 
 def measure_tree(root: Path) -> Tuple[int, int]:

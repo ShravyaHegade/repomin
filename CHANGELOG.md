@@ -65,6 +65,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Report validation now checks event records and rejects impossible oracle
+  pass/run counts in the audit trail.
 - Report validation now checks holdout sample structure, contiguous indexes, and
   pass-count accounting instead of validating only the sample list length.
 - Generated `REPOMIN.md` commands now use a safe Markdown fence when the command
