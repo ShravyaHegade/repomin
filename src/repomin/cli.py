@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import math
 import os
 import re
@@ -48,7 +49,13 @@ from repomin.python_manifest import PythonManifestReducer
 from repomin.python_source import PythonSourceReducer
 from repomin.reducer import FileReducer
 from repomin.ruby_manifest import RubyManifestReducer
-from repomin.report import measure_tree, verify_existing_report, write_report
+from repomin.report import (
+    ReportValidationError,
+    measure_tree,
+    validate_report_file,
+    verify_existing_report,
+    write_report,
+)
 from repomin.semantic import (
     HttpSemanticBackend,
     NoopSemanticBackend,
@@ -719,6 +726,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     raw_argv = list(sys.argv[1:] if argv is None else argv)
+    if raw_argv and raw_argv[0] == "report":
+        return _report_command(raw_argv[1:])
     if raw_argv and raw_argv[0] == "completion":
         if len(raw_argv) == 2 and raw_argv[1] in SUPPORTED_SHELLS:
             print(completion_script(raw_argv[1]), end="")
@@ -1330,6 +1339,52 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ) as exc:
         print("repomin: %s" % exc, file=sys.stderr)
         return 2
+
+
+def _report_command(argv: Sequence[str]) -> int:
+    """Handle report inspection commands without changing reduction parsing."""
+    if not argv or argv[0] in {"-h", "--help"}:
+        print("usage: repomin report validate REPORT [--payload DIRECTORY]")
+        print("validate a machine-readable report and optional payload fingerprint")
+        return 0
+    if argv[0] != "validate":
+        print("repomin report: unsupported command %r" % argv[0], file=sys.stderr)
+        return 2
+    parser = argparse.ArgumentParser(prog="repomin report validate")
+    parser.add_argument("report", type=Path, help="report.json to validate")
+    parser.add_argument(
+        "--payload",
+        type=Path,
+        help="exported payload directory whose holdout fingerprint should match",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print a compact machine-readable validation result",
+    )
+    try:
+        args = parser.parse_args(list(argv[1:]))
+        report = validate_report_file(args.report, args.payload)
+    except (ReportValidationError, ValueError, OSError) as exc:
+        print("repomin report: %s" % exc, file=sys.stderr)
+        return 2
+    result = {
+        "valid": True,
+        "schema_version": report["schema_version"],
+        "holdout_status": report["holdout_certification"]["status"],
+        "report": str(args.report.resolve()),
+    }
+    if args.payload is not None:
+        result["payload"] = str(args.payload.resolve())
+        result["payload_checked"] = True
+    if args.json:
+        print(json.dumps(result, sort_keys=True))
+    else:
+        print(
+            "Valid ReproMin report (schema %s, holdout %s)."
+            % (result["schema_version"], result["holdout_status"])
+        )
+    return 0
 
 
 def _run_fixed_point(

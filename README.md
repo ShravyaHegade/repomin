@@ -517,6 +517,17 @@ observed pass counts, veto counters, resume state, and per-sample summaries.
 When no holdout is requested its status is explicitly `not_requested`, and the
 default command count is unchanged.
 
+Reports can be checked without rerunning the reproduction command. The command
+validates the schema and phase/holdout accounting; `--payload` additionally
+checks the certified tree fingerprint:
+
+```sh
+repomin report validate /tmp/checkout-repro.repomin/report.json \
+  --payload /tmp/checkout-repro
+```
+
+Use `--json` for a compact result suitable for CI checks.
+
 ## Resumable sessions
 
 Long reductions can persist their accepted tree and progress in a directory

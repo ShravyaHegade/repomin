@@ -1,11 +1,215 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 from repomin.model import ReductionResult, TREE_FINGERPRINT_POLICY
+from repomin.session import _tree_digest
 from repomin.signature import process_failure_name
+
+
+REPORT_SCHEMA_VERSION = 1
+_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+
+
+class ReportValidationError(ValueError):
+    """The report is not a structurally valid ReproMin schema document."""
+
+
+def validate_report_document(report: object) -> Dict[str, object]:
+    """Validate the stable, machine-readable invariants of one report."""
+    if not isinstance(report, dict):
+        raise ReportValidationError("report root must be a JSON object")
+    if report.get("schema_version") != REPORT_SCHEMA_VERSION:
+        raise ReportValidationError(
+            "unsupported report schema_version: %r" % report.get("schema_version")
+        )
+    _require_text(report, "command", non_empty=True)
+    _require_optional_text(report, "failure_match")
+    _require_int(report, "baseline_exit_code")
+    _require_int(report, "final_exit_code")
+    for name in ("source", "output"):
+        section = _require_object(report, name)
+        _require_nonnegative_int(section, "files", name)
+        _require_nonnegative_int(section, "bytes", name)
+    for name in ("attempts", "accepted_mutations", "cache_hits"):
+        _require_nonnegative_int(report, name)
+
+    execution = _require_object(report, "execution")
+    backend = _require_text(execution, "backend", non_empty=True)
+    if backend not in {"host", "docker"}:
+        raise ReportValidationError("execution.backend must be host or docker")
+    _require_positive_int(execution, "jobs", "execution")
+
+    phases = _require_object(report, "phase_statistics")
+    coverage = phases.get("coverage")
+    if coverage not in {"complete", "partial"}:
+        raise ReportValidationError(
+            "phase_statistics.coverage must be complete or partial"
+        )
+    phase_items = phases.get("phases")
+    if not isinstance(phase_items, list):
+        raise ReportValidationError("phase_statistics.phases must be an array")
+    if coverage == "complete":
+        phase_attempts = 0
+        phase_accepted = 0
+        for index, phase in enumerate(phase_items):
+            if not isinstance(phase, dict):
+                raise ReportValidationError("phase %d must be an object" % index)
+            attempts = _require_nonnegative_int(phase, "attempts", "phase %d" % index)
+            accepted = _require_nonnegative_int(phase, "accepted", "phase %d" % index)
+            no_op = _require_nonnegative_int(phase, "no_op", "phase %d" % index)
+            rejected = _require_nonnegative_int(phase, "rejected", "phase %d" % index)
+            superseded = _require_nonnegative_int(
+                phase, "superseded", "phase %d" % index
+            )
+            aborted = _require_nonnegative_int(phase, "aborted", "phase %d" % index)
+            if attempts != no_op + rejected + accepted + superseded + aborted:
+                raise ReportValidationError(
+                    "phase %d attempts accounting is inconsistent" % index
+                )
+            sample_uses = _require_nonnegative_int(
+                phase, "oracle_sample_uses", "phase %d" % index
+            )
+            samples = _require_nonnegative_int(
+                phase, "oracle_samples", "phase %d" % index
+            )
+            cache_hits = _require_nonnegative_int(
+                phase, "cache_hits", "phase %d" % index
+            )
+            if sample_uses != samples + cache_hits:
+                raise ReportValidationError(
+                    "phase %d oracle accounting is inconsistent" % index
+                )
+            phase_attempts += attempts
+            phase_accepted += accepted
+        if phase_attempts != report["attempts"]:
+            raise ReportValidationError(
+                "phase attempts do not equal report attempts"
+            )
+        if phase_accepted != report["accepted_mutations"]:
+            raise ReportValidationError(
+                "phase accepted count does not equal report accepted_mutations"
+            )
+
+    holdout = _require_object(report, "holdout_certification")
+    status = _require_text(holdout, "status", non_empty=True)
+    allowed_statuses = {
+        "not_requested",
+        "not_started",
+        "certified",
+        "not_certified",
+        "rejected",
+        "interrupted",
+        "aborted",
+    }
+    if status not in allowed_statuses:
+        raise ReportValidationError("unknown holdout_certification.status: %s" % status)
+    planned = _require_nonnegative_int(
+        holdout, "planned_runs", "holdout_certification"
+    )
+    completed = _require_nonnegative_int(
+        holdout, "completed_runs", "holdout_certification"
+    )
+    passes = _require_nonnegative_int(holdout, "passes", "holdout_certification")
+    if completed > planned or passes > completed:
+        raise ReportValidationError("holdout run counts are inconsistent")
+    samples = holdout.get("samples")
+    if not isinstance(samples, list) or len(samples) != completed:
+        raise ReportValidationError(
+            "holdout_certification.samples must match completed_runs"
+        )
+    fingerprint = holdout.get("artifact_fingerprint")
+    if fingerprint is not None and (
+        not isinstance(fingerprint, str) or _SHA256.fullmatch(fingerprint) is None
+    ):
+        raise ReportValidationError("holdout artifact_fingerprint must be SHA-256")
+    if status == "certified" and fingerprint is None:
+        raise ReportValidationError(
+            "certified holdout must include artifact_fingerprint"
+        )
+    return report
+
+
+def validate_report_file(
+    report_path: Path,
+    payload: Optional[Path] = None,
+) -> Dict[str, object]:
+    """Validate a report file and, when supplied, its exported payload tree."""
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, ValueError) as exc:
+        raise ReportValidationError(
+            "report could not be read: %s" % report_path
+        ) from exc
+    validate_report_document(report)
+    assert isinstance(report, dict)
+    holdout = report["holdout_certification"]
+    assert isinstance(holdout, dict)
+    expected = holdout.get("artifact_fingerprint")
+    if payload is not None and expected is not None:
+        if not payload.is_dir():
+            raise ReportValidationError("payload is not a directory: %s" % payload)
+        actual = _tree_digest(payload, set())
+        if actual != expected:
+            raise ReportValidationError(
+                "payload fingerprint differs from report: %s" % payload
+            )
+    return report
+
+
+def _require_object(parent: Dict[str, object], name: str) -> Dict[str, object]:
+    value = parent.get(name)
+    if not isinstance(value, dict):
+        raise ReportValidationError("%s must be an object" % name)
+    return value
+
+
+def _require_text(
+    parent: Dict[str, object], name: str, *, non_empty: bool = False
+) -> str:
+    value = parent.get(name)
+    if not isinstance(value, str) or (non_empty and not value):
+        expected = "non-empty text" if non_empty else "text"
+        raise ReportValidationError("%s must be %s" % (name, expected))
+    return value
+
+
+def _require_optional_text(parent: Dict[str, object], name: str) -> None:
+    value = parent.get(name)
+    if value is not None and not isinstance(value, str):
+        raise ReportValidationError("%s must be text or null" % name)
+
+
+def _require_int(parent: Dict[str, object], name: str) -> int:
+    value = parent.get(name)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ReportValidationError("%s must be an integer" % name)
+    return value
+
+
+def _require_nonnegative_int(
+    parent: Dict[str, object], name: str, context: str = ""
+) -> int:
+    value = _require_int(parent, name)
+    if value < 0:
+        prefix = (context + ".") if context else ""
+        raise ReportValidationError(
+            "%s%s must be non-negative" % (prefix, name)
+        )
+    return value
+
+
+def _require_positive_int(
+    parent: Dict[str, object], name: str, context: str = ""
+) -> int:
+    value = _require_int(parent, name)
+    if value <= 0:
+        prefix = (context + ".") if context else ""
+        raise ReportValidationError("%s%s must be positive" % (prefix, name))
+    return value
 
 
 def measure_tree(root: Path) -> Tuple[int, int]:

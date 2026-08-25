@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `repomin report validate` for dependency-free report schema, phase/holdout
+  accounting, and optional certified payload fingerprint verification.
 - A concise Chinese quick start covering installation, a runnable reduction,
   oracle semantics, host execution risk, and report locations.
 - PowerShell completion generation through `repomin completion powershell`,

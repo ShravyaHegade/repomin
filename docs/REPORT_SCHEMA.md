@@ -113,6 +113,16 @@ matching failure signature.
 4. Keep `report.json` and `REPOMIN.md` beside the payload; do not copy either
    file into the tree when independently rerunning the command.
 
+The bundled validator checks these structural rules without executing the
+reproduction command:
+
+```sh
+repomin report validate OUTPUT.repomin/report.json --payload OUTPUT
+```
+
+It returns exit code `2` for malformed JSON, unsupported schema versions,
+inconsistent phase/holdout accounting, or a payload fingerprint mismatch.
+
 The architecture document explains the statistical contracts and reducer
 invariants behind these fields. See [ARCHITECTURE.md](ARCHITECTURE.md) and
 [SECURITY.md](../SECURITY.md) before processing untrusted repositories.
