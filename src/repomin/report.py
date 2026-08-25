@@ -339,6 +339,7 @@ def _reproduction_markdown(
         "failure signature.\n\n"
         "## Reproduce\n\n"
         "```sh\n%s\n```\n\n" % command
+        + _execution_markdown(result)
         + match_markdown
         + _java_signature_markdown(result)
         + _python_signature_markdown(result)
@@ -346,6 +347,23 @@ def _reproduction_markdown(
         + _holdout_markdown(result)
         + "See `report.json` in this metadata directory for reduction statistics.\n"
     )
+
+
+def _execution_markdown(result: ReductionResult) -> str:
+    """Describe the recorded execution boundary without exposing env values."""
+    stats = result.stats
+    lines = ["## Execution\n", "Backend: `%s`" % stats.backend]
+    if stats.backend == "docker":
+        if stats.container_image is not None:
+            lines.append("Docker image reference: `%s`" % stats.container_image)
+        if stats.container_image_id is not None:
+            lines.append("Docker image ID: `%s`" % stats.container_image_id)
+        if stats.container_network is not None:
+            lines.append("Docker network policy: `%s`" % stats.container_network)
+    if stats.environment_names:
+        names = ", ".join("`%s`" % name for name in stats.environment_names)
+        lines.append("Environment variable names: %s (values are not recorded)" % names)
+    return "\n".join(lines) + "\n\n"
 
 
 def _java_signature_markdown(result: ReductionResult) -> str:

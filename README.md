@@ -93,8 +93,10 @@ directory rename fails the export instead of using a racy fallback.
 The output directory contains only the reduced repository payload. ReproMin
 writes `report.json` and `REPOMIN.md` to the sibling metadata directory
 `OUTPUT.repomin`, so its own evidence cannot change the tree that passed the
-oracle. Neither an existing output nor an existing metadata directory is
-overwritten.
+oracle. `REPOMIN.md` also records the execution backend and, for Docker runs,
+the image reference, immutable image ID, and network policy. Environment
+variable values are never written; only their names are listed when configured.
+Neither an existing output nor an existing metadata directory is overwritten.
 
 Use repeatable `--ignore NAME` options to exclude an exact file or directory
 basename before the first baseline run. The name applies recursively, in

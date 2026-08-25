@@ -40,6 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   names, and comparison output preserves that selection metadata.
 - `benchmarks/compare.py --require-same-selection` can enforce identical
   benchmark filters across repeated summary comparisons.
+- `REPOMIN.md` now records the execution backend and Docker image/network
+  context needed to reproduce the same execution boundary without exposing
+  configured environment values.
 - Optional machine-readable offline benchmark summaries with per-fixture status
   and elapsed time, uploaded as a CI artifact.
 - `repomin completion bash|zsh|fish` for shell-native option, enum, and path

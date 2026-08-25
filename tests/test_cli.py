@@ -950,6 +950,13 @@ class CliTest(unittest.TestCase):
             execution = _report(output)["execution"]
             self.assertEqual("fixture:mutable", execution["image"])
             self.assertEqual(runner.resolved_image_id, execution["image_id"])
+            reproduction = (_metadata_output(output) / "REPOMIN.md").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("Backend: `docker`", reproduction)
+            self.assertIn("Docker image reference: `fixture:mutable`", reproduction)
+            self.assertIn("Docker image ID: `%s`" % runner.resolved_image_id, reproduction)
+            self.assertIn("Docker network policy: `none`", reproduction)
 
     def test_end_to_end_writes_repro_and_report(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -992,6 +999,10 @@ class CliTest(unittest.TestCase):
             self.assertEqual(2, report["execution"]["jobs"])
             self.assertFalse(report["execution"]["cache_enabled"])
             self.assertEqual("host", report["execution"]["backend"])
+            reproduction = (_metadata_output(output) / "REPOMIN.md").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("Backend: `host`", reproduction)
             self.assertEqual(0, report["cache_hits"])
 
     def test_custom_ignore_is_applied_before_baseline_and_recorded(self) -> None:
