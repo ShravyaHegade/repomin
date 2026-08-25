@@ -74,6 +74,48 @@ class BenchmarkCompareTest(unittest.TestCase):
         self.assertEqual(1.2, comparison["runs"][0]["duration_seconds"])
         self.assertEqual([], comparison["runs"][0]["selection"]["only"])
 
+    def test_require_same_selection_rejects_different_filters(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            first = _write(
+                root,
+                "first.json",
+                [{"name": "alpha", "status": "passed", "duration_seconds": 1.0}],
+            )
+            second = _write(
+                root,
+                "second.json",
+                [{"name": "alpha", "status": "passed", "duration_seconds": 1.0}],
+            )
+            data = json.loads(second.read_text(encoding="utf-8"))
+            data["selection"]["only"] = ["alpha"]
+            second.write_text(json.dumps(data), encoding="utf-8")
+
+            with self.assertRaises(_MODULE.SummaryError):
+                _MODULE.compare_summaries(
+                    [first, second], require_same_selection=True
+                )
+
+    def test_require_same_selection_rejects_legacy_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "legacy.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "passed": 1,
+                        "skipped": 0,
+                        "failed": 0,
+                        "checks": [
+                            {"name": "alpha", "status": "passed", "duration_seconds": 0}
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaises(_MODULE.SummaryError):
+                _MODULE.compare_summaries([path], require_same_selection=True)
+
     def test_rejects_duplicate_checks_and_inconsistent_counts(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

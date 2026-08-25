@@ -94,13 +94,27 @@ def _selection(summary: Mapping[str, Any]) -> Mapping[str, Any] | None:
     return selection
 
 
-def compare_summaries(paths: Iterable[Path]) -> dict[str, Any]:
+def compare_summaries(
+    paths: Iterable[Path],
+    *,
+    require_same_selection: bool = False,
+) -> dict[str, Any]:
     """Build a deterministic descriptive comparison for summary files."""
     inputs = list(paths)
     if not inputs:
         raise SummaryError("at least one summary path is required")
     summaries = [load_summary(path) for path in inputs]
     selections = [_selection(summary) for summary in summaries]
+    if require_same_selection:
+        if any(selection is None for selection in selections):
+            raise SummaryError(
+                "selection metadata is required with --require-same-selection"
+            )
+        first_selection = selections[0]
+        if any(selection != first_selection for selection in selections[1:]):
+            raise SummaryError(
+                "benchmark summaries do not use the same selection filters"
+            )
     by_name = [_check_by_name(summary) for summary in summaries]
     names = sorted({name for checks in by_name for name in checks})
 
@@ -217,13 +231,21 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
         metavar="PATH",
         help="also write the normalized comparison as JSON",
     )
+    parser.add_argument(
+        "--require-same-selection",
+        action="store_true",
+        help="fail unless every summary has identical selection metadata",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parse_args(argv)
     try:
-        comparison = compare_summaries(args.summaries)
+        comparison = compare_summaries(
+            args.summaries,
+            require_same_selection=args.require_same_selection,
+        )
         if args.json_output is not None:
             args.json_output.parent.mkdir(parents=True, exist_ok=True)
             args.json_output.write_text(

@@ -56,6 +56,20 @@ python3 benchmarks/compare.py \
   --json-output /tmp/repomin-benchmarks-comparison.json
 ```
 
+For a strict repeated-run comparison, require every input to carry identical
+selection metadata:
+
+```sh
+python3 benchmarks/compare.py \
+  --require-same-selection \
+  /tmp/repomin-benchmarks-run-1.json \
+  /tmp/repomin-benchmarks-run-2.json
+```
+
+This rejects legacy summaries without selection metadata and summaries created
+with different `--only` or `--exclude` filters. The default comparison remains
+backward-compatible and still reports missing fixtures explicitly.
+
 The text output aligns fixture names across runs and shows status plus elapsed
 time. The JSON output includes per-run counts and descriptive min/median/max
 durations. Missing fixtures are shown explicitly. This is a regression and

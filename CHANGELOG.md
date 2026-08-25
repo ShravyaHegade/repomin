@@ -38,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   subset with strict unknown-name and empty-selection validation.
 - Benchmark JSON summaries now record the exact filters and selected fixture
   names, and comparison output preserves that selection metadata.
+- `benchmarks/compare.py --require-same-selection` can enforce identical
+  benchmark filters across repeated summary comparisons.
 - Optional machine-readable offline benchmark summaries with per-fixture status
   and elapsed time, uploaded as a CI artifact.
 - `repomin completion bash|zsh|fish` for shell-native option, enum, and path
