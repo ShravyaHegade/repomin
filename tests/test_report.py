@@ -84,6 +84,29 @@ class ReportValidationTest(unittest.TestCase):
         with self.assertRaisesRegex(ReportValidationError, "unsupported"):
             validate_report_document(report)
 
+    def test_rejects_malformed_holdout_samples(self) -> None:
+        report = _report()
+        holdout = report["holdout_certification"]
+        holdout.update(
+            {
+                'status': 'certified',
+                'planned_runs': 1,
+                'completed_runs': 1,
+                'passes': 1,
+                'samples': [{'index': 0, 'accepted': 'yes'}],
+                'artifact_fingerprint': 'a' * 64,
+            }
+        )
+        with self.assertRaisesRegex(ReportValidationError, "accepted must be boolean"):
+            validate_report_document(report)
+        holdout["samples"] = [{"index": 2, "accepted": True}]
+        with self.assertRaisesRegex(ReportValidationError, "contiguous"):
+            validate_report_document(report)
+        holdout["samples"] = [{"index": 0, "accepted": True}]
+        holdout["passes"] = 0
+        with self.assertRaisesRegex(ReportValidationError, "do not match"):
+            validate_report_document(report)
+
     def test_validates_certified_payload_fingerprint(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -121,6 +121,26 @@ def validate_report_document(report: object) -> Dict[str, object]:
         raise ReportValidationError(
             "holdout_certification.samples must match completed_runs"
         )
+    sample_passes = 0
+    for index, sample in enumerate(samples):
+        if not isinstance(sample, dict):
+            raise ReportValidationError(
+                "holdout sample %d must be an object" % index
+            )
+        sample_index = _require_nonnegative_int(
+            sample, "index", "holdout sample %d" % index
+        )
+        if sample_index != index:
+            raise ReportValidationError("holdout sample indexes must be contiguous")
+        accepted = sample.get("accepted")
+        if not isinstance(accepted, bool):
+            raise ReportValidationError(
+                "holdout sample %d accepted must be boolean" % index
+            )
+        if accepted:
+            sample_passes += 1
+    if sample_passes != passes:
+        raise ReportValidationError("holdout passes do not match samples")
     fingerprint = holdout.get("artifact_fingerprint")
     if fingerprint is not None and (
         not isinstance(fingerprint, str) or _SHA256.fullmatch(fingerprint) is None
