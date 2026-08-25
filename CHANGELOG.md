@@ -65,6 +65,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Packaging CI now verifies that wheel and source-distribution entry points
+  report the expected installed version, matching the release checklist.
 - Added pytest configuration for the `src/` layout and repository test boundary,
   so `pytest -q` does not collect benchmark fixture tests accidentally.
 - Refreshed the contributor roadmap and published scoped good-first issues for

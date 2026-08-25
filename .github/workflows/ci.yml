@@ -132,6 +132,12 @@ jobs:
 
           cd "$run_dir"
           "$venv/bin/repomin" --help >/dev/null
+          expected_version=$("$venv/bin/python" -c 'import repomin; print("repomin " + repomin.__version__)')
+          version_output=$("$venv/bin/repomin" --version)
+          if [[ "$version_output" != "$expected_version" ]]; then
+            echo "unexpected installed wheel version: $version_output" >&2
+            exit 1
+          fi
           "$venv/bin/python" -I - <<'PY'
           from pathlib import Path
           import sys
@@ -169,6 +175,12 @@ jobs:
 
           cd "$run_dir"
           "$venv/bin/repomin" --help >/dev/null
+          expected_version=$("$venv/bin/python" -c 'import repomin; print("repomin " + repomin.__version__)')
+          version_output=$("$venv/bin/repomin" --version)
+          if [[ "$version_output" != "$expected_version" ]]; then
+            echo "unexpected installed source distribution version: $version_output" >&2
+            exit 1
+          fi
           "$venv/bin/python" -I - <<'PY'
           from pathlib import Path
           import sys
