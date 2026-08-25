@@ -4,8 +4,10 @@ import unittest
 from pathlib import Path
 
 from repomin.cli import main
+from repomin.model import ReductionResult, ReductionStats, RunResult
 from repomin.report import (
     ReportValidationError,
+    _reproduction_markdown,
     validate_report_document,
     validate_report_file,
 )
@@ -56,6 +58,16 @@ def _report() -> dict:
 
 
 class ReportValidationTest(unittest.TestCase):
+    def test_reproduction_markdown_uses_longer_fence_for_backticks(self) -> None:
+        result = ReductionResult(
+            output=Path("reduced"),
+            stats=ReductionStats(source_files=1, source_bytes=1),
+            baseline=RunResult(1, "", "", 0.0),
+            final_run=RunResult(1, "", "", 0.0),
+        )
+        markdown = _reproduction_markdown(result, "python3 -c 'print(\"```\")'", None)
+        self.assertIn("````sh\npython3 -c 'print(\"```\")'\n````\n", markdown)
+
     def test_accepts_complete_report_accounting(self) -> None:
         report = _report()
         self.assertIs(validate_report_document(report), report)

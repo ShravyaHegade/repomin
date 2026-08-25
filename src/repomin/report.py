@@ -542,7 +542,7 @@ def _reproduction_markdown(
         "This repository was reduced by ReproMin while preserving the configured "
         "failure signature.\n\n"
         "## Reproduce\n\n"
-        "```sh\n%s\n```\n\n" % command
+        + _shell_markdown(command)
         + _execution_markdown(result)
         + match_markdown
         + _java_signature_markdown(result)
@@ -551,6 +551,14 @@ def _reproduction_markdown(
         + _holdout_markdown(result)
         + "See `report.json` in this metadata directory for reduction statistics.\n"
     )
+
+
+def _shell_markdown(command: str) -> str:
+    """Wrap a shell command without allowing its backticks to close the fence."""
+    fence = "```"
+    while fence in command:
+        fence += "`"
+    return "%ssh\n%s\n%s\n\n" % (fence, command, fence)
 
 
 def _execution_markdown(result: ReductionResult) -> str:

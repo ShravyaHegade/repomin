@@ -65,6 +65,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Generated `REPOMIN.md` commands now use a safe Markdown fence when the command
+  itself contains backticks.
 - Packaging CI now verifies that wheel and source-distribution entry points
   report the expected installed version, matching the release checklist.
 - Added pytest configuration for the `src/` layout and repository test boundary,
