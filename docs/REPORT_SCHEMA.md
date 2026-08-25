@@ -94,7 +94,11 @@ reliability.
 Each `events` entry records the phase, description, duration, oracle pass/runs,
 rate and lower-bound evidence, and (when applicable) candidate family
 confidence and early-acceptance state. Event order is significant for audit
-and resume diagnostics.
+and resume diagnostics. Optional rates and bounds are finite probabilities in
+the inclusive `[0, 1]` range; `oracle_rate` must agree with
+`oracle_passes / oracle_runs`. Candidate family index, confidence, and alpha
+are an all-or-none group when present, and the early-acceptance flag is
+boolean when present.
 
 Signature objects preserve identity beyond a broad output match. Java and
 Python signatures include exception class, message, and normalized frames.

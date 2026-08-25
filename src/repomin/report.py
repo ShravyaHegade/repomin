@@ -101,17 +101,51 @@ def validate_report_document(report: object) -> Dict[str, object]:
     for index, event in enumerate(events):
         if not isinstance(event, dict):
             raise ReportValidationError("event %d must be an object" % index)
+        context = "event %d" % index
         _require_text(event, "phase", non_empty=True)
         _require_text(event, "description", non_empty=True)
-        _require_nonnegative_number(event, "duration_seconds", "event %d" % index)
+        _require_nonnegative_number(event, "duration_seconds", context)
         oracle_runs = _require_nonnegative_int(
-            event, "oracle_runs", "event %d" % index
+            event, "oracle_runs", context
         )
         oracle_passes = _require_nonnegative_int(
-            event, "oracle_passes", "event %d" % index
+            event, "oracle_passes", context
         )
         if oracle_passes > oracle_runs:
-            raise ReportValidationError("event oracle passes exceed runs")
+            raise ReportValidationError("%s oracle passes exceed runs" % context)
+        oracle_rate = _require_optional_probability(event, "oracle_rate", context)
+        if oracle_rate is not None:
+            if oracle_runs == 0 or not math.isclose(
+                oracle_rate, float(oracle_passes) / oracle_runs, rel_tol=1e-12
+            ):
+                raise ReportValidationError(
+                    "%s oracle_rate does not match pass/run counts" % context
+                )
+        for name in ("oracle_lower_bound", "oracle_anytime_lower_bound"):
+            _require_optional_probability(event, name, context)
+        early_acceptance = event.get("oracle_early_acceptance")
+        if "oracle_early_acceptance" in event and not isinstance(
+            early_acceptance, bool
+        ):
+            raise ReportValidationError(
+                "%s oracle_early_acceptance must be boolean" % context
+            )
+        family_index = _require_optional_nonnegative_int(
+            event, "candidate_family_index", context
+        )
+        family_confidence = _require_optional_probability(
+            event, "candidate_confidence", context
+        )
+        family_alpha = _require_optional_probability(event, "candidate_alpha", context)
+        if family_index is None:
+            if family_confidence is not None or family_alpha is not None:
+                raise ReportValidationError(
+                    "%s candidate family evidence is incomplete" % context
+                )
+        elif family_confidence is None or family_alpha is None:
+            raise ReportValidationError(
+                "%s candidate family evidence is incomplete" % context
+            )
 
     holdout = _require_object(report, "holdout_certification")
     status = _require_text(holdout, "status", non_empty=True)
@@ -241,6 +275,14 @@ def _require_nonnegative_int(
     return value
 
 
+def _require_optional_nonnegative_int(
+    parent: Dict[str, object], name: str, context: str = ""
+) -> Optional[int]:
+    if name not in parent or parent[name] is None:
+        return None
+    return _require_nonnegative_int(parent, name, context)
+
+
 def _require_positive_int(
     parent: Dict[str, object], name: str, context: str = ""
 ) -> int:
@@ -264,6 +306,18 @@ def _require_nonnegative_number(
             "%s%s must be finite and non-negative" % (prefix, name)
         )
     return float(value)
+
+
+def _require_optional_probability(
+    parent: Dict[str, object], name: str, context: str = ""
+) -> Optional[float]:
+    if name not in parent or parent[name] is None:
+        return None
+    value = _require_nonnegative_number(parent, name, context)
+    if value > 1.0:
+        prefix = (context + ".") if context else ""
+        raise ReportValidationError("%s%s must be at most 1" % (prefix, name))
+    return value
 
 
 def measure_tree(root: Path) -> Tuple[int, int]:

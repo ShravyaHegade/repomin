@@ -78,6 +78,37 @@ class ReportValidationTest(unittest.TestCase):
         with self.assertRaisesRegex(ReportValidationError, "exceed runs"):
             validate_report_document(report)
 
+    def test_rejects_inconsistent_event_evidence(self) -> None:
+        report = _report()
+        report["events"] = [{
+            "phase": "files",
+            "description": "remove file",
+            "duration_seconds": 0.1,
+            "oracle_runs": 2,
+            "oracle_passes": 1,
+            "oracle_rate": 1.0,
+            "oracle_lower_bound": 0.5,
+            "oracle_anytime_lower_bound": 0.5,
+            "oracle_early_acceptance": False,
+        }]
+        with self.assertRaisesRegex(ReportValidationError, "oracle_rate"):
+            validate_report_document(report)
+
+        report["events"][0]["oracle_rate"] = 0.5
+        report["events"][0]["oracle_early_acceptance"] = "false"
+        with self.assertRaisesRegex(ReportValidationError, "early_acceptance"):
+            validate_report_document(report)
+
+        report["events"][0]["oracle_early_acceptance"] = False
+        report["events"][0]["candidate_confidence"] = 0.9
+        with self.assertRaisesRegex(ReportValidationError, "incomplete"):
+            validate_report_document(report)
+
+        report["events"][0].pop("candidate_confidence")
+        report["events"][0]["oracle_lower_bound"] = float("nan")
+        with self.assertRaisesRegex(ReportValidationError, "finite"):
+            validate_report_document(report)
+
     def test_reproduction_markdown_uses_longer_fence_for_backticks(self) -> None:
         result = ReductionResult(
             output=Path("reduced"),
