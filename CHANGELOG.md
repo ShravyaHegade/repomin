@@ -73,6 +73,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   interruption aggregates against complete sample records.
 - Report validation now checks holdout terminal statistic types, completeness,
   and observed-rate accounting.
+- Benchmark and report numeric validation now turns oversized integer values
+  into ordinary validation errors instead of leaking `OverflowError` tracebacks.
 - Report validation now checks optional event probabilities, candidate-family
   evidence, and boolean early-acceptance state for finite, consistent values.
 - Report validation now checks event records and rejects impossible oracle

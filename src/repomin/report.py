@@ -475,12 +475,19 @@ def _require_nonnegative_number(
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         prefix = (context + ".") if context else ""
         raise ReportValidationError("%s%s must be a number" % (prefix, name))
-    if not math.isfinite(float(value)) or value < 0:
+    try:
+        numeric = float(value)
+    except OverflowError as exc:
+        prefix = (context + ".") if context else ""
+        raise ReportValidationError(
+            "%s%s must be finite and non-negative" % (prefix, name)
+        ) from exc
+    if not math.isfinite(numeric) or numeric < 0:
         prefix = (context + ".") if context else ""
         raise ReportValidationError(
             "%s%s must be finite and non-negative" % (prefix, name)
         )
-    return float(value)
+    return numeric
 
 
 def _require_optional_probability(

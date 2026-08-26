@@ -109,6 +109,10 @@ class ReportValidationTest(unittest.TestCase):
         with self.assertRaisesRegex(ReportValidationError, "finite"):
             validate_report_document(report)
 
+        report["events"][0]["oracle_lower_bound"] = 10**1000
+        with self.assertRaisesRegex(ReportValidationError, "finite"):
+            validate_report_document(report)
+
     def test_reproduction_markdown_uses_longer_fence_for_backticks(self) -> None:
         result = ReductionResult(
             output=Path("reduced"),

@@ -160,6 +160,28 @@ class BenchmarkCompareTest(unittest.TestCase):
             with self.assertRaises(_MODULE.SummaryError):
                 _MODULE.compare_summaries([nonfinite])
 
+            oversized = root / "oversized.json"
+            oversized.write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "passed": 1,
+                        "skipped": 0,
+                        "failed": 0,
+                        "checks": [
+                            {
+                                "name": "bad",
+                                "status": "passed",
+                                "duration_seconds": 10**1000,
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaises(_MODULE.SummaryError):
+                _MODULE.compare_summaries([oversized])
+
     def test_rejects_inconsistent_selection_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "invalid.json"

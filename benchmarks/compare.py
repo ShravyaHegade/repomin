@@ -23,9 +23,15 @@ class SummaryError(ValueError):
 def _number(value: Any, label: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise SummaryError("%s must be a number" % label)
-    if not math.isfinite(value) or value < 0:
+    try:
+        numeric = float(value)
+    except OverflowError as exc:
+        raise SummaryError(
+            "%s must be a finite non-negative number" % label
+        ) from exc
+    if not math.isfinite(numeric) or numeric < 0:
         raise SummaryError("%s must be a finite non-negative number" % label)
-    return float(value)
+    return numeric
 
 
 def load_summary(path: Path) -> Mapping[str, Any]:
