@@ -7,10 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0.dev3] - 2026-08-26
+
 ### Fixed
 
 - GitHub Action artifact uploads now include the default hidden
   `.repomin-result` payload and metadata directories.
+
+### Changed
+
+- `REPOMIN.md` now summarizes the payload file count and byte size so a
+  minimized artifact can be assessed before opening it.
 
 ## [0.1.0.dev2] - 2026-08-26
 
