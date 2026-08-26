@@ -3,6 +3,7 @@
 ![CI](https://github.com/fly1d/repomin/actions/workflows/ci.yml/badge.svg)
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License Apache-2.0](https://img.shields.io/github/license/fly1d/repomin)
+[![Discussions](https://img.shields.io/github/discussions/fly1d/repomin)](https://github.com/fly1d/repomin/discussions)
 
 ReproMin reduces a failing repository while continuously checking that the
 original failure still occurs. Its output is intended to be a small,
@@ -1018,6 +1019,11 @@ documentation improvements. Start with
 [issue templates](.github/ISSUE_TEMPLATE). Participation is governed by the
 [Code of Conduct](CODE_OF_CONDUCT.md). Security reports should follow
 [SECURITY.md](SECURITY.md).
+
+For general usage questions and design conversations, use [GitHub
+Discussions](https://github.com/fly1d/repomin/discussions). New contributors can
+pick a scoped task from [Good first issues](docs/GOOD_FIRST_ISSUES.md), and
+support details are collected in [SUPPORT.md](SUPPORT.md).
 
 ## License
 
