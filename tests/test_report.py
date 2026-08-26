@@ -236,6 +236,44 @@ class ReportValidationTest(unittest.TestCase):
         with self.assertRaisesRegex(ReportValidationError, "exceeds completed"):
             validate_report_document(report)
 
+    def test_rejects_inconsistent_holdout_statistics(self) -> None:
+        report = _report()
+        holdout = report["holdout_certification"]
+        holdout.update(
+            {
+                "status": "certified",
+                "planned_runs": 1,
+                "completed_runs": 1,
+                "passes": 1,
+                "minimum_rate": 0.9,
+                "confidence": 0.95,
+                "required_passes": 1,
+                "observed_rate": 0.5,
+                "exact_lower_bound": 0.1,
+                "exact_p_value": 0.01,
+                "exact_rate_gate_passed": True,
+                "samples": [{"index": 1, "accepted": True}],
+                "artifact_fingerprint": "a" * 64,
+            }
+        )
+        with self.assertRaisesRegex(ReportValidationError, "observed_rate"):
+            validate_report_document(report)
+
+        holdout["observed_rate"] = 1.0
+        holdout["confidence"] = 1.0
+        with self.assertRaisesRegex(ReportValidationError, "confidence"):
+            validate_report_document(report)
+
+        holdout["confidence"] = 0.95
+        holdout["exact_rate_gate_passed"] = "yes"
+        with self.assertRaisesRegex(ReportValidationError, "must be boolean"):
+            validate_report_document(report)
+
+        holdout["exact_rate_gate_passed"] = True
+        holdout.pop("exact_p_value")
+        with self.assertRaisesRegex(ReportValidationError, "terminal statistics"):
+            validate_report_document(report)
+
     def test_validates_certified_payload_fingerprint(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

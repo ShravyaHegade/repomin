@@ -169,6 +169,60 @@ def validate_report_document(report: object) -> Dict[str, object]:
     passes = _require_nonnegative_int(holdout, "passes", "holdout_certification")
     if completed > planned or passes > completed:
         raise ReportValidationError("holdout run counts are inconsistent")
+    terminal_fields = (
+        "minimum_rate",
+        "confidence",
+        "required_passes",
+        "observed_rate",
+        "exact_lower_bound",
+        "exact_p_value",
+        "exact_rate_gate_passed",
+    )
+    terminal_present = [
+        name for name in terminal_fields
+        if name in holdout and holdout[name] is not None
+    ]
+    if terminal_present and len(terminal_present) != len(terminal_fields):
+        raise ReportValidationError(
+            "holdout terminal statistics must be complete when present"
+        )
+    minimum_rate = _require_optional_probability(
+        holdout, "minimum_rate", "holdout_certification"
+    )
+    confidence = _require_optional_probability(
+        holdout, "confidence", "holdout_certification"
+    )
+    if minimum_rate is not None and minimum_rate <= 0.0:
+        raise ReportValidationError("holdout_certification.minimum_rate must be positive")
+    if confidence is not None and not 0.0 < confidence < 1.0:
+        raise ReportValidationError(
+            "holdout_certification.confidence must be in (0, 1)"
+        )
+    required_passes = _require_optional_nonnegative_int(
+        holdout, "required_passes", "holdout_certification"
+    )
+    if required_passes is not None and required_passes > planned:
+        raise ReportValidationError(
+            "holdout_certification.required_passes exceeds planned_runs"
+        )
+    observed_rate = _require_optional_probability(
+        holdout, "observed_rate", "holdout_certification"
+    )
+    if observed_rate is not None:
+        if planned == 0 or not math.isclose(
+            observed_rate, float(passes) / planned, rel_tol=1e-12
+        ):
+            raise ReportValidationError(
+                "holdout observed_rate does not match pass/run counts"
+            )
+    for name in ("exact_lower_bound", "exact_p_value"):
+        _require_optional_probability(holdout, name, "holdout_certification")
+    exact_gate = holdout.get("exact_rate_gate_passed")
+    if "exact_rate_gate_passed" in holdout and exact_gate is not None:
+        if not isinstance(exact_gate, bool):
+            raise ReportValidationError(
+                "holdout_certification.exact_rate_gate_passed must be boolean"
+            )
     samples = holdout.get("samples")
     if not isinstance(samples, list) or len(samples) != completed:
         raise ReportValidationError(

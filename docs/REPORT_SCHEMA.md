@@ -96,6 +96,10 @@ When the aggregate timeout, resource-exhaustion, or interruption counters are
 present alongside complete sample fields, they must equal the corresponding
 sample counts and cannot exceed `completed_runs`.
 
+Terminal holdout statistics are an all-or-none group when present. The
+`observed_rate` must equal `passes / planned_runs`, confidence must be in
+`(0, 1)`, and the exact gate result must be boolean.
+
 ## Events and signatures
 
 Each `events` entry records the phase, description, duration, oracle pass/runs,
