@@ -84,7 +84,8 @@ from baseline, candidate, and ordinary final-validation samples.
 
 The report records the planned/completed sample counts, passes, exact lower
 bound, exact p-value, resource/timeout veto counts, artifact fingerprint, and
-the holdout policy identifier. A certified lower bound is a statistical claim
+the holdout policy identifier. Sample `index` values are one-based and
+contiguous through `completed_runs`. A certified lower bound is a statistical claim
 about oracle pass probability under fresh iid samples in the recorded
 environment. It is not a proof of correctness, compatibility, or production
 reliability.

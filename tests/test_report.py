@@ -144,7 +144,7 @@ class ReportValidationTest(unittest.TestCase):
                 'planned_runs': 1,
                 'completed_runs': 1,
                 'passes': 1,
-                'samples': [{'index': 0, 'accepted': 'yes'}],
+                'samples': [{'index': 1, 'accepted': 'yes'}],
                 'artifact_fingerprint': 'a' * 64,
             }
         )
@@ -153,7 +153,7 @@ class ReportValidationTest(unittest.TestCase):
         holdout["samples"] = [{"index": 2, "accepted": True}]
         with self.assertRaisesRegex(ReportValidationError, "contiguous"):
             validate_report_document(report)
-        holdout["samples"] = [{"index": 0, "accepted": True}]
+        holdout["samples"] = [{"index": 1, "accepted": True}]
         holdout["passes"] = 0
         with self.assertRaisesRegex(ReportValidationError, "do not match"):
             validate_report_document(report)
@@ -172,7 +172,7 @@ class ReportValidationTest(unittest.TestCase):
                 "planned_runs": 1,
                 "completed_runs": 1,
                 "passes": 1,
-                "samples": [{"index": 0, "accepted": True}],
+                "samples": [{"index": 1, "accepted": True}],
                 "artifact_fingerprint": _tree_digest(payload, set()),
             }
             report_path = metadata / "report.json"

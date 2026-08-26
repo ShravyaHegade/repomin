@@ -183,8 +183,10 @@ def validate_report_document(report: object) -> Dict[str, object]:
         sample_index = _require_nonnegative_int(
             sample, "index", "holdout sample %d" % index
         )
-        if sample_index != index:
-            raise ReportValidationError("holdout sample indexes must be contiguous")
+        if sample_index != index + 1:
+            raise ReportValidationError(
+                "holdout sample indexes must be contiguous from 1"
+            )
         accepted = sample.get("accepted")
         if not isinstance(accepted, bool):
             raise ReportValidationError(

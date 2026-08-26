@@ -34,6 +34,7 @@ from repomin.oracle import (
     clopper_pearson_lower_bound,
     exact_binomial_upper_tail,
 )
+from repomin.report import validate_report_document
 from repomin.session import _tree_digest
 
 
@@ -1818,6 +1819,7 @@ class CliTest(unittest.TestCase):
             self.assertEqual(0, exit_code, stderr.getvalue())
             self.assertEqual(31, runner.calls)
             report = _report(output)
+            validate_report_document(report)
             execution = report["execution"]
             self.assertEqual(1, execution["final_runs"])
             self.assertEqual(1, execution["final_passes"])
