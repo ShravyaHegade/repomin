@@ -158,6 +158,48 @@ class ReportValidationTest(unittest.TestCase):
         with self.assertRaisesRegex(ReportValidationError, "do not match"):
             validate_report_document(report)
 
+    def test_rejects_inconsistent_holdout_evidence(self) -> None:
+        report = _report()
+        holdout = report["holdout_certification"]
+        holdout.update(
+            {
+                "status": "not_certified",
+                "planned_runs": 1,
+                "completed_runs": 1,
+                "samples": [
+                    {
+                        "index": 1,
+                        "outcome": "passed",
+                        "accepted": False,
+                        "returncode": 1,
+                        "duration_seconds": 0.1,
+                        "output_sha256": "a" * 64,
+                    }
+                ],
+            }
+        )
+        with self.assertRaisesRegex(ReportValidationError, "does not match"):
+            validate_report_document(report)
+
+        sample = holdout["samples"][0]
+        sample["outcome"] = "timed_out"
+        sample["timed_out"] = True
+        sample["accepted"] = True
+        with self.assertRaisesRegex(ReportValidationError, "cannot be accepted"):
+            validate_report_document(report)
+
+        sample["accepted"] = False
+        sample["timed_out"] = True
+        sample["resource_exhausted"] = True
+        with self.assertRaisesRegex(ReportValidationError, "timed out and resource"):
+            validate_report_document(report)
+
+        sample["timed_out"] = False
+        sample["resource_exhausted"] = False
+        sample["outcome"] = "interrupted"
+        with self.assertRaisesRegex(ReportValidationError, "interrupted evidence"):
+            validate_report_document(report)
+
     def test_validates_certified_payload_fingerprint(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -175,13 +175,21 @@ def validate_report_document(report: object) -> Dict[str, object]:
             "holdout_certification.samples must match completed_runs"
         )
     sample_passes = 0
+    allowed_outcomes = {
+        "interrupted",
+        "timed_out",
+        "resource_exhausted",
+        "passed",
+        "failed",
+    }
     for index, sample in enumerate(samples):
         if not isinstance(sample, dict):
             raise ReportValidationError(
                 "holdout sample %d must be an object" % index
             )
+        context = "holdout sample %d" % index
         sample_index = _require_nonnegative_int(
-            sample, "index", "holdout sample %d" % index
+            sample, "index", context
         )
         if sample_index != index + 1:
             raise ReportValidationError(
@@ -194,6 +202,83 @@ def validate_report_document(report: object) -> Dict[str, object]:
             )
         if accepted:
             sample_passes += 1
+        outcome_present = "outcome" in sample
+        outcome = sample.get("outcome")
+        if outcome_present:
+            _require_text(sample, "outcome", non_empty=True)
+            assert isinstance(outcome, str)
+            if outcome not in allowed_outcomes:
+                raise ReportValidationError(
+                    "%s has unknown outcome: %s" % (context, outcome)
+                )
+        returncode = sample.get("returncode")
+        if returncode is not None and (
+            isinstance(returncode, bool) or not isinstance(returncode, int)
+        ):
+            raise ReportValidationError(
+                "%s returncode must be an integer or null" % context
+            )
+        duration = sample.get("duration_seconds")
+        if duration is not None:
+            _require_nonnegative_number(sample, "duration_seconds", context)
+        timed_out = sample.get("timed_out", False)
+        resource_exhausted = sample.get("resource_exhausted", False)
+        for name, value in (
+            ("timed_out", timed_out),
+            ("resource_exhausted", resource_exhausted),
+        ):
+            if not isinstance(value, bool):
+                raise ReportValidationError(
+                    "%s %s must be boolean" % (context, name)
+                )
+        if timed_out and resource_exhausted:
+            raise ReportValidationError(
+                "%s cannot be timed out and resource exhausted" % context
+            )
+        resource_reason = sample.get("resource_reason")
+        if resource_reason is not None and not isinstance(resource_reason, str):
+            raise ReportValidationError(
+                "%s resource_reason must be text or null" % context
+            )
+        output_sha256 = sample.get("output_sha256")
+        if output_sha256 is not None and (
+            not isinstance(output_sha256, str)
+            or _SHA256.fullmatch(output_sha256) is None
+        ):
+            raise ReportValidationError("%s output_sha256 must be SHA-256" % context)
+        if (timed_out or resource_exhausted) and accepted:
+            raise ReportValidationError(
+                "%s resource veto sample cannot be accepted" % context
+            )
+        if outcome_present:
+            assert isinstance(outcome, str)
+            if outcome == "interrupted":
+                if (
+                    accepted
+                    or returncode is not None
+                    or duration is not None
+                    or timed_out
+                    or resource_exhausted
+                    or resource_reason is not None
+                    or output_sha256 is not None
+                ):
+                    raise ReportValidationError(
+                        "%s interrupted evidence is inconsistent" % context
+                    )
+            else:
+                expected_outcome = (
+                    "timed_out"
+                    if timed_out
+                    else "resource_exhausted"
+                    if resource_exhausted
+                    else "passed"
+                    if accepted
+                    else "failed"
+                )
+                if outcome != expected_outcome:
+                    raise ReportValidationError(
+                        "%s outcome does not match evidence" % context
+                    )
     if sample_passes != passes:
         raise ReportValidationError("holdout passes do not match samples")
     fingerprint = holdout.get("artifact_fingerprint")

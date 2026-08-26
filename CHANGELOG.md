@@ -67,6 +67,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed report validation to accept the one-based contiguous holdout sample
   indexes emitted by certified reduction reports.
+- Report validation now checks holdout outcome, timeout/resource, duration, and
+  observation-digest evidence when those fields are present.
 - Report validation now checks optional event probabilities, candidate-family
   evidence, and boolean early-acceptance state for finite, consistent values.
 - Report validation now checks event records and rejects impossible oracle
