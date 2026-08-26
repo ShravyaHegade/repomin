@@ -60,7 +60,9 @@ The artifact contains the reduced payload at `output` and the sibling metadata
 directory at `output.repomin`. The report records the command outcome,
 reduction attempts, execution backend, and payload fingerprint. It is evidence
 for the configured reproduction in the recorded environment, not a proof of
-code correctness or production reliability.
+code correctness or production reliability. The action explicitly includes
+hidden paths so the default `.repomin-result` payload and its `.repomin`
+metadata directory are uploaded by GitHub Actions.
 
 For local reproduction and report validation, see [EXAMPLES.md](EXAMPLES.md)
 and [REPORT_SCHEMA.md](REPORT_SCHEMA.md).
