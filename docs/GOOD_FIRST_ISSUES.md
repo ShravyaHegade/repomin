@@ -6,8 +6,8 @@ and follow [CONTRIBUTING.md](../CONTRIBUTING.md) for tests and documentation.
 
 ## Ready to claim
 
-- [Add a runnable Go module reduction example](https://github.com/fly1d/repomin/issues/7)
-  - Document the existing `benchmarks/go-module` fixture in
+- [Add a runnable Cargo workspace reduction example](https://github.com/fly1d/repomin/issues/10)
+  - Document the existing `benchmarks/cargo-workspace` fixture in
     `docs/EXAMPLES.md`, including its oracle contract and expected payload.
 
 Check the repository's [open issues](https://github.com/fly1d/repomin/issues)
