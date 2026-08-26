@@ -74,6 +74,38 @@ repomin . \
 Only direct entries in `[packages]`, `[dev-packages]`, and `[requires]` are
 eligible. Pipenv source settings and `Pipfile.lock` are preserved.
 
+## Shrink a Cargo workspace without network access
+
+The repository includes a local-only Rust workspace with one required path
+dependency, one unused path dependency, and unrelated workspace members. It
+does not contact crates.io when Cargo runs in offline mode:
+
+```sh
+out_parent="$(mktemp -d /tmp/repomin-cargo-workspace.XXXXXX)"
+PYTHONPATH=src python3 -m repomin benchmarks/cargo-workspace \
+  --command 'CARGO_NET_OFFLINE=true cargo run -q -p app' \
+  --match 'ORIGINAL_FAILURE' \
+  --adapter cargo \
+  --source-reducer none \
+  --output "$out_parent/result"
+```
+
+The command intentionally panics with `ORIGINAL_FAILURE`. The reduced
+workspace keeps these files:
+
+```text
+Cargo.toml
+app/Cargo.toml
+app/src/main.rs
+required-lib/Cargo.toml
+required-lib/src/lib.rs
+```
+
+The `app` package and its `required-lib` dependency remain, while the unused
+dependency and unrelated workspace members are removed. The sibling
+`result.repomin/report.json` records the reduction evidence. This example
+requires a local Cargo toolchain; the fixture itself needs no network access.
+
 ## Shrink a Go module without network access
 
 From a clean repository checkout, run the existing Go module fixture with the

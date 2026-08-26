@@ -6,13 +6,12 @@ and follow [CONTRIBUTING.md](../CONTRIBUTING.md) for tests and documentation.
 
 ## Ready to claim
 
-- [Add a runnable Cargo workspace reduction example](https://github.com/fly1d/repomin/issues/10)
-  - Document the existing `benchmarks/cargo-workspace` fixture in
-    `docs/EXAMPLES.md`, including its oracle contract and expected payload.
+There are no currently scoped starter issues. Check the repository's
+[open issues](https://github.com/fly1d/repomin/issues) for newly proposed work,
+or use the template below to suggest a focused contribution.
 
-Check the repository's [open issues](https://github.com/fly1d/repomin/issues)
-for the latest scoped work, or propose a new starter task using the guidelines
-below.
+Completed tasks are removed from this page so contributors do not begin stale
+work.
 
 ## Proposing another starter task
 
@@ -23,5 +22,4 @@ manifest extensions that reuse an existing parser, and deterministic benchmark
 assertions. Open a feature request before implementing a new reducer or backend
 whose trust boundary is not already documented.
 
-Completed tasks are removed from this page so contributors do not begin stale
-work. The complete project direction remains in [ROADMAP.md](ROADMAP.md).
+The complete project direction remains in [ROADMAP.md](ROADMAP.md).
