@@ -1001,6 +1001,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for extension points and project rules,
   fields, accounting identities, holdout evidence, and consumer guidance.
 - [docs/LLM_REDUCTION.md](docs/LLM_REDUCTION.md) - optional semantic reducer
   seam and its provider-agnostic contract.
+- [docs/GITHUB_ACTION.md](docs/GITHUB_ACTION.md) - use ReproMin in CI to upload
+  a minimized failure reproduction and its report.
 - [docs/ROADMAP.md](docs/ROADMAP.md) - current priorities, future directions,
   and explicit non-goals.
 - [benchmarks/README.md](benchmarks/README.md) - real fixtures and acceptance

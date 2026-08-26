@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A reusable GitHub Action that runs a configured reduction and uploads the
+  minimized payload with its auditable `.repomin` report directory.
 - A contributor recognition page linking highlighted community work and the
   complete GitHub contributors graph.
 - A runnable, network-free Go module reduction workflow in the examples guide,

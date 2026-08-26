@@ -1,5 +1,8 @@
 include CONTRIBUTING.md
 include SECURITY.md
+include SUPPORT.md
+include CONTRIBUTORS.md
+include action.yml
 recursive-include docs *.md
 include tests/test_*.py
 
