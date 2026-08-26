@@ -1,7 +1,9 @@
 # Support
 
-Use the repository issue templates for reproducible bug reports, usage
-questions, and benchmark proposals:
+Use GitHub Discussions for general usage questions. Use the repository issue
+templates for reproducible bug reports and benchmark proposals:
+
+https://github.com/fly1d/repomin/discussions
 
 https://github.com/fly1d/repomin/issues/new/choose
 
