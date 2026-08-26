@@ -279,6 +279,40 @@ def validate_report_document(report: object) -> Dict[str, object]:
                     raise ReportValidationError(
                         "%s outcome does not match evidence" % context
                     )
+    aggregate_fields = (
+        ("timed_out_runs", "timed_out", "timed out"),
+        ("resource_exhausted_runs", "resource_exhausted", "resource exhausted"),
+    )
+    for field, sample_field, label in aggregate_fields:
+        if field not in holdout:
+            continue
+        count = _require_nonnegative_int(holdout, field, "holdout_certification")
+        if count > completed:
+            raise ReportValidationError(
+                "holdout_certification.%s exceeds completed_runs" % field
+            )
+        if all(sample_field in sample for sample in samples):
+            observed = sum(sample[sample_field] is True for sample in samples)
+            if count != observed:
+                raise ReportValidationError(
+                    "holdout %s count does not match samples" % label
+                )
+    if "interrupted_runs" in holdout:
+        interrupted = _require_nonnegative_int(
+            holdout, "interrupted_runs", "holdout_certification"
+        )
+        if interrupted > completed:
+            raise ReportValidationError(
+                "holdout_certification.interrupted_runs exceeds completed_runs"
+            )
+        if all("outcome" in sample for sample in samples):
+            observed = sum(
+                sample.get("outcome") == "interrupted" for sample in samples
+            )
+            if interrupted != observed:
+                raise ReportValidationError(
+                    "holdout interrupted count does not match samples"
+                )
     if sample_passes != passes:
         raise ReportValidationError("holdout passes do not match samples")
     fingerprint = holdout.get("artifact_fingerprint")

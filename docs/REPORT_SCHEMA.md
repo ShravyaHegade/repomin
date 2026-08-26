@@ -92,6 +92,10 @@ claim about oracle pass probability under fresh iid samples in the recorded
 environment. It is not a proof of correctness, compatibility, or production
 reliability.
 
+When the aggregate timeout, resource-exhaustion, or interruption counters are
+present alongside complete sample fields, they must equal the corresponding
+sample counts and cannot exceed `completed_runs`.
+
 ## Events and signatures
 
 Each `events` entry records the phase, description, duration, oracle pass/runs,

@@ -200,6 +200,42 @@ class ReportValidationTest(unittest.TestCase):
         with self.assertRaisesRegex(ReportValidationError, "interrupted evidence"):
             validate_report_document(report)
 
+    def test_rejects_holdout_aggregate_drift(self) -> None:
+        report = _report()
+        holdout = report["holdout_certification"]
+        holdout.update(
+            {
+                "status": "not_certified",
+                "planned_runs": 1,
+                "completed_runs": 1,
+                "passes": 0,
+                "timed_out_runs": 0,
+                "resource_exhausted_runs": 0,
+                "interrupted_runs": 0,
+                "samples": [
+                    {
+                        "index": 1,
+                        "outcome": "timed_out",
+                        "accepted": False,
+                        "timed_out": True,
+                        "resource_exhausted": False,
+                    }
+                ],
+            }
+        )
+        with self.assertRaisesRegex(ReportValidationError, "timed out count"):
+            validate_report_document(report)
+
+        holdout["timed_out_runs"] = 1
+        holdout["interrupted_runs"] = 1
+        with self.assertRaisesRegex(ReportValidationError, "interrupted count"):
+            validate_report_document(report)
+
+        holdout["interrupted_runs"] = 0
+        holdout["resource_exhausted_runs"] = 2
+        with self.assertRaisesRegex(ReportValidationError, "exceeds completed"):
+            validate_report_document(report)
+
     def test_validates_certified_payload_fingerprint(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
