@@ -74,6 +74,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- README now states the primary user workflows, evidence limitations, and the
+  CI integration path before the detailed option reference.
 - Fixed report validation to accept the one-based contiguous holdout sample
   indexes emitted by certified reduction reports.
 - Report validation now checks holdout outcome, timeout/resource, duration, and

@@ -21,6 +21,22 @@ inputs. Environment tools such as ReproZip and containers capture what is
 needed to rerun a command. ReproMin targets the layer between them: project
 files, modules, build manifests, dependencies, and source symbols.
 
+## Who benefits
+
+- **CI and application teams** get a small failure artifact instead of a full
+  checkout when a regression needs to be reported or reviewed.
+- **Library and build-tool maintainers** can isolate the exact dependency,
+  manifest entry, source symbol, or module that keeps a failure reproducible.
+- **Test and benchmark authors** can turn a reduced tree into a deterministic
+  regression fixture with an auditable `report.json`.
+- **AI-assisted debugging workflows** can use the optional semantic reducer to
+  propose edits while the ordinary oracle remains the acceptance gate.
+
+The result is evidence for one configured reproduction in one recorded
+environment. It is not a proof of code correctness, production reliability, or
+a security sandbox. For automatic CI artifacts, see the
+[GitHub Action guide](docs/GITHUB_ACTION.md).
+
 ## Quick start
 
 ReproMin requires Python 3.9 or newer and has no runtime dependencies.
