@@ -6,9 +6,13 @@ and follow [CONTRIBUTING.md](../CONTRIBUTING.md) for tests and documentation.
 
 ## Ready to claim
 
-There are currently no unclaimed starter issues. Check the repository's
-[open issues](https://github.com/fly1d/repomin/issues) for the latest scoped
-work, or propose a new starter task using the guidelines below.
+- [Add a runnable Go module reduction example](https://github.com/fly1d/repomin/issues/7)
+  - Document the existing `benchmarks/go-module` fixture in
+    `docs/EXAMPLES.md`, including its oracle contract and expected payload.
+
+Check the repository's [open issues](https://github.com/fly1d/repomin/issues)
+for the latest scoped work, or propose a new starter task using the guidelines
+below.
 
 ## Proposing another starter task
 
