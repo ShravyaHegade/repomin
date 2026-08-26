@@ -1005,6 +1005,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for extension points and project rules,
 - [benchmarks/README.md](benchmarks/README.md) - real fixtures and acceptance
   gates.
 - [CONTRIBUTING.md](CONTRIBUTING.md) - project rules and extension points.
+- [SUPPORT.md](SUPPORT.md) - where to ask questions and how to prepare useful
+  issue reports.
 - [CHANGELOG.md](CHANGELOG.md) - notable changes by release.
 - [docs/RELEASING.md](docs/RELEASING.md) - GitHub Release checklist and artifact verification.
 

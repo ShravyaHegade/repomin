@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- GitHub issue configuration, a usage-question template, a benchmark proposal
+  template, and a support guide to make community reports and first
+  contributions easier to start.
 - `repomin report validate` for dependency-free report schema, phase/holdout
   accounting, and optional certified payload fingerprint verification.
 - A concise Chinese quick start covering installation, a runnable reduction,

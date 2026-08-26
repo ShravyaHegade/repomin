@@ -3,9 +3,10 @@
 New contributors should start with [docs/EXAMPLES.md](docs/EXAMPLES.md) to see
 the tool in action, then pick a scoped GitHub issue from
 [docs/GOOD_FIRST_ISSUES.md](docs/GOOD_FIRST_ISSUES.md). Comment on the issue
-before starting so overlapping work stays visible. Bug reports and feature
-requests use the repository issue templates, and all participation is governed
-by [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+before starting so overlapping work stays visible. Bug reports, usage questions,
+feature requests, and benchmark proposals use the repository issue templates.
+Support guidance is collected in [SUPPORT.md](SUPPORT.md), and all participation
+is governed by [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 Maintainers preparing a GitHub Release should follow
 [docs/RELEASING.md](docs/RELEASING.md). It is intentionally separate from the
@@ -20,6 +21,17 @@ ReproMin is intentionally organized around small extension points:
 - source reducers backed by parser or compiler syntax trees;
 - execution backends for containers and remote workers;
 - public benchmark repositories with known reduction targets.
+
+## Adding a benchmark
+
+Benchmarks are the most useful way to contribute a reproducible user workflow.
+Start with the [benchmark proposal template](.github/ISSUE_TEMPLATE/benchmark_proposal.md)
+and get agreement on the oracle contract before writing the fixture. Keep the
+fixture self-contained, deterministic, network-free, and small enough to run
+in CI. Add a fixture `README.md`, an expected minimized payload, and an
+integration assertion in `tests/test_offline_benchmarks.py`. Run the focused
+benchmark locally with `python3 benchmarks/run_offline.py --only <name>` and
+include its output in the pull request description.
 
 Changes to a reducer must include a test proving both sides of its contract:
 the intended failure remains, and a different failure is rejected. Reducers
