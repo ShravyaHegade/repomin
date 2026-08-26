@@ -79,6 +79,39 @@ jobs:
           path: benchmark-results.json
           if-no-files-found: error
 
+  action-smoke:
+    name: GitHub Action smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run local ReproMin action
+        uses: ./
+        with:
+          source: benchmarks/input-controls
+          command: python3 reproduce.py
+          match: INPUT_CONTROLS_FAILURE
+          adapter: none
+          source-reducer: none
+          output: .repomin-action-smoke
+          artifact-name: action-smoke
+      - name: Download and validate action artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: action-smoke
+          path: action-smoke-download
+      - name: Check downloaded payload and report
+        shell: bash
+        run: |
+          set -euo pipefail
+          report=$(find action-smoke-download -type f -path '*/.repomin-action-smoke.repomin/report.json' -print -quit)
+          payload=$(find action-smoke-download -type d -name .repomin-action-smoke -print -quit)
+          if [[ -z "$report" || -z "$payload" ]]; then
+            echo "action artifact did not contain payload and report directories" >&2
+            find action-smoke-download -print >&2
+            exit 1
+          fi
+          repomin report validate "$report" --payload "$payload" --json
+
   quality:
     name: Packaging and static checks
     runs-on: ubuntu-latest

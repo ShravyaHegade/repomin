@@ -839,6 +839,7 @@ def _reproduction_markdown(
         + _python_signature_markdown(result)
         + _process_signature_markdown(result)
         + _holdout_markdown(result)
+        + _payload_markdown(result)
         + "See `report.json` in this metadata directory for reduction statistics.\n"
     )
 
@@ -849,6 +850,30 @@ def _shell_markdown(command: str) -> str:
     while fence in command:
         fence += "`"
     return "%ssh\n%s\n%s\n\n" % (fence, command, fence)
+
+
+def _payload_markdown(result: ReductionResult) -> str:
+    """Summarize the exported files without making reports unbounded."""
+    files = sorted(
+        path.relative_to(result.output).as_posix()
+        for path in result.output.rglob("*")
+        if path.is_file() and not path.is_symlink()
+    )
+    display_limit = 200
+    displayed = files[:display_limit]
+    lines = [
+        "## Payload",
+        "",
+        "Reduced payload: `%d` files, `%d` bytes."
+        % (result.stats.output_files, result.stats.output_bytes),
+        "",
+        "```text",
+    ]
+    lines.extend(displayed)
+    if len(files) > display_limit:
+        lines.append("... (%d more files)" % (len(files) - display_limit))
+    lines.extend(["```", ""])
+    return "\n".join(lines)
 
 
 def _execution_markdown(result: ReductionResult) -> str:

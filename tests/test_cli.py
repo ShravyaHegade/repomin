@@ -1032,6 +1032,11 @@ class CliTest(unittest.TestCase):
                 encoding="utf-8"
             )
             self.assertIn("Backend: `host`", reproduction)
+            self.assertIn("## Payload", reproduction)
+            self.assertIn("Reduced payload: `2` files", reproduction)
+            self.assertIn("reproduce.py", reproduction)
+            self.assertIn("required.txt", reproduction)
+            self.assertNotIn("unused.txt", reproduction)
             self.assertEqual(0, report["cache_hits"])
 
     def test_custom_ignore_is_applied_before_baseline_and_recorded(self) -> None:
