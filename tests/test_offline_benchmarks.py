@@ -3,6 +3,7 @@ import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 _RUNNER_PATH = Path(__file__).resolve().parents[1] / "benchmarks" / "run_offline.py"
@@ -14,9 +15,20 @@ _RUNNER_SPEC.loader.exec_module(_RUNNER)
 _write_summary = _RUNNER._write_summary
 _offline_main = _RUNNER.main
 _select_checks = _RUNNER._select_checks
+_validate_report = _RUNNER._validate_report
 
 
 class OfflineBenchmarkSummaryTest(unittest.TestCase):
+    def test_validates_fixture_report_against_exported_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "result"
+            metadata = output.with_name(output.name + ".repomin")
+            output.mkdir()
+            metadata.mkdir()
+            with patch.object(_RUNNER, "validate_report_file") as validate:
+                _validate_report(output)
+            validate.assert_called_once_with(metadata / "report.json", output)
+
     def test_list_mode_is_side_effect_free_and_includes_all_fixtures(self) -> None:
         from contextlib import redirect_stdout
         from io import StringIO

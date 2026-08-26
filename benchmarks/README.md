@@ -37,7 +37,8 @@ Failures include only a bounded error summary; the full reproduction output
 remains in the command logs.
 
 The runner executes each offline fixture in a fresh temporary output directory,
-checks the exported payload and report, and independently reruns the oracle. It
+validates the generated report and payload fingerprint, and independently
+reruns the oracle. It
 skips toolchain-dependent fixtures (`cargo`, `go`, `ruby`) when their command is
 absent and exits non-zero on any failure. Docker, Maven, Gradle, PHP, and .NET
 SDK fixtures are intentionally outside this runner.

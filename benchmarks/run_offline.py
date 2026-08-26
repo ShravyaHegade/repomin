@@ -18,6 +18,10 @@ from typing import Callable, Iterator, Optional, Sequence
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(ROOT / "src"))
+
+from repomin.report import validate_report_file  # noqa: E402
 
 
 def _environment() -> dict[str, str]:
@@ -70,6 +74,7 @@ def _run_repomin(
         )
         if result.returncode != 0:
             raise RuntimeError(result.stderr.strip())
+        _validate_report(output)
         yield output
 
 
@@ -90,6 +95,12 @@ def _independent(
 def _require(condition: bool, message: str) -> None:
     if not condition:
         raise AssertionError(message)
+
+
+def _validate_report(output: Path) -> None:
+    """Validate the sidecar and exported payload produced by one fixture."""
+    metadata = output.with_name(output.name + ".repomin")
+    validate_report_file(metadata / "report.json", output)
 
 
 def _check_input_controls() -> None:
