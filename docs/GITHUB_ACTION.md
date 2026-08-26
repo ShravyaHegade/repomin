@@ -12,7 +12,7 @@ job's failure-handling step:
 ```yaml
 - name: Minimize failure
   if: ${{ failure() }}
-  uses: fly1d/repomin@main
+  uses: fly1d/repomin@v0.1.0.dev2
   with:
     command: python -m pytest -q
     match: "FAILED tests/test_regression.py"
@@ -24,7 +24,8 @@ job's failure-handling step:
 
 The checkout must happen before this step. The action installs ReproMin from
 the selected ref and uses `GITHUB_WORKSPACE` as the repository boundary. Keep
-the action ref pinned to a reviewed release or commit for production CI.
+the action ref pinned to a reviewed release or full commit SHA for production
+CI; the version above is the current pre-release.
 
 ## Inputs
 
@@ -38,7 +39,7 @@ existing local image:
 ```yaml
 - name: Minimize Docker failure
   if: ${{ failure() }}
-  uses: fly1d/repomin@main
+  uses: fly1d/repomin@v0.1.0.dev2
   with:
     command: python3 reproduce.py
     match: "ORIGINAL_FAILURE"

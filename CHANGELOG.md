@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+No changes yet.
+
+## [0.1.0.dev2] - 2026-08-26
+
 ### Added
 
 - A reusable GitHub Action that runs a configured reduction and uploads the
