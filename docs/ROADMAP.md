@@ -28,6 +28,9 @@ dates. Concrete contribution tasks live in
 - Keep the dependency-free `benchmarks/compare.py` summary comparison useful
   for fixture regressions and environment-to-environment diagnostics.
 - Improve runnable Java, Python, Docker, and semantic workflow examples.
+- Make the [real failure pilot guide](REAL_FAILURE_PILOT.md) easy to discover
+  so sanitized user workflows can be turned into fixtures and compatibility
+  notes.
 
 ## Next: release readiness
 

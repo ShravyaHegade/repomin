@@ -1028,6 +1028,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for extension points and project rules,
   GitHub contributors graph.
 - [SUPPORT.md](SUPPORT.md) - where to ask questions and how to prepare useful
   issue reports.
+- [docs/REAL_FAILURE_PILOT.md](docs/REAL_FAILURE_PILOT.md) - how to share a
+  sanitized real CI or dependency failure.
 - [CHANGELOG.md](CHANGELOG.md) - notable changes by release.
 - [docs/RELEASING.md](docs/RELEASING.md) - GitHub Release checklist and artifact verification.
 
@@ -1043,7 +1045,9 @@ documentation improvements. Start with
 For general usage questions and design conversations, use [GitHub
 Discussions](https://github.com/fly1d/repomin/discussions). New contributors can
 pick a scoped task from [Good first issues](docs/GOOD_FIRST_ISSUES.md), and
-support details are collected in [SUPPORT.md](SUPPORT.md).
+support details are collected in [SUPPORT.md](SUPPORT.md). Users with a real
+CI or dependency failure can follow the [pilot guide](docs/REAL_FAILURE_PILOT.md)
+before sharing a sanitized workflow in issue #11.
 
 ## License
 

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A real-failure pilot guide with a sanitization checklist, report validation
+  workflow, and copyable feedback template.
 - Offline benchmark JSON summaries and comparison output now record the
   ReproMin version used for each run, making cross-version fixture comparisons
   auditable.

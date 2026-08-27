@@ -12,6 +12,8 @@ Before opening an issue:
 - Check the [quick start](docs/QUICKSTART.zh-CN.md), [examples](docs/EXAMPLES.md),
   and [report schema](docs/REPORT_SCHEMA.md).
 - Search existing issues for the command, adapter, or error message.
+- For a sanitized real CI workflow, follow the [real failure pilot
+  guide](docs/REAL_FAILURE_PILOT.md) and share the summary in issue #11.
 - Include the operating system, Python and ReproMin versions, backend, exact
   command, and a redacted report or output when available.
 
