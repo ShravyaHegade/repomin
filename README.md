@@ -615,7 +615,9 @@ default command count is unchanged.
 
 Reports can be checked without rerunning the reproduction command. The command
 validates the schema and phase/holdout accounting; `--payload` additionally
-checks the exported tree fingerprint and payload size:
+checks the exported tree fingerprint and payload size. If an artifact store
+rewrites filesystem metadata such as modification times, validation can report
+a content-only fingerprint match and explicitly mark metadata drift:
 
 ```sh
 repomin report validate /tmp/checkout-repro.repomin/report.json \

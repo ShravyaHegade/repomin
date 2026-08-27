@@ -13,6 +13,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from repomin.cli import main
 from repomin.model import (
@@ -24,6 +25,7 @@ from repomin.model import (
 )
 from repomin.replay import ReplayError, replay_report
 from repomin.report import ReportValidationError, _build_report, measure_tree
+from repomin.session import _tree_digest
 
 
 _REPRODUCER = """\
@@ -124,6 +126,26 @@ class ReplayTest(unittest.TestCase):
             sample["outcome"] for sample in result["samples"]
         ])
 
+    def test_replay_accepts_archive_mtime_drift_with_content_evidence(self) -> None:
+        payload, report_path, _report = self._fixture()
+        entry = payload / "reproduce.py"
+        status = entry.stat()
+        os.utime(entry, ns=(status.st_atime_ns, status.st_mtime_ns + 1000000))
+        self.assertNotEqual(
+            json.loads(report_path.read_text(encoding="utf-8"))["output"][
+                "tree_sha256"
+            ],
+            _tree_digest(payload, set()),
+        )
+
+        reproduced, result = replay_report(report_path, payload)
+
+        self.assertTrue(reproduced)
+        self.assertEqual("content", result["fingerprint_mode"])
+        self.assertTrue(result["metadata_drift_possible"])
+        self.assertTrue(result["fingerprint_verified"])
+        self.assertIsNotNone(result["actual_content_fingerprint"])
+
     def test_completed_mismatch_is_evidence_not_a_setup_error(self) -> None:
         payload, report_path, report = self._fixture()
         report["command"] = _python_command("-c") + " pass"
@@ -156,6 +178,49 @@ class ReplayTest(unittest.TestCase):
 
         self.assertTrue(reproduced)
         self.assertNotIn("correct-secret", json.dumps(result))
+
+    def test_environment_names_without_a_digest_are_rejected(self) -> None:
+        payload, report_path, report = self._fixture(
+            environment={"REPLAY_TEST_TOKEN": "correct-secret"}
+        )
+        report["execution"].pop("environment_sha256")
+        report_path.write_text(json.dumps(report), encoding="utf-8")
+
+        with self.assertRaisesRegex(ReplayError, "environment digest"):
+            replay_report(
+                report_path,
+                payload,
+                environment={"REPLAY_TEST_TOKEN": "any-value"},
+            )
+
+    def test_case_insensitive_environment_name_collisions_are_rejected_on_windows(
+        self,
+    ) -> None:
+        payload, report_path, report = self._fixture()
+        report["execution"]["environment_names"] = ["Path", "PATH"]
+        report["execution"]["environment_sha256"] = _environment_digest(
+            {"Path": "one", "PATH": "two"}
+        )
+        report_path.write_text(json.dumps(report), encoding="utf-8")
+
+        fake_os = mock.Mock()
+        fake_os.name = "nt"
+        with mock.patch("repomin.replay.os", fake_os):
+            with self.assertRaisesRegex(ReplayError, "case-insensitive"):
+                replay_report(
+                    report_path,
+                    payload,
+                    environment={"Path": "one", "PATH": "two"},
+                )
+
+    def test_present_invalid_working_directory_basename_is_rejected(self) -> None:
+        payload, report_path, report = self._fixture()
+        for value in (None, "", "../escape", "nested/name"):
+            with self.subTest(value=value):
+                report["execution"]["working_directory_basename"] = value
+                report_path.write_text(json.dumps(report), encoding="utf-8")
+                with self.assertRaisesRegex(ReplayError, "basename"):
+                    replay_report(report_path, payload)
 
     def test_tampered_payload_is_rejected_before_execution(self) -> None:
         payload, report_path, _report = self._fixture()

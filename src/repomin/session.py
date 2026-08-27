@@ -22,6 +22,7 @@ from repomin.gitignore import GitignoreMatcher
 from repomin.model import (
     CANDIDATE_FAMILY_CONTROL_POLICY,
     HOLDOUT_CERTIFICATION_POLICY,
+    TREE_CONTENT_FINGERPRINT_POLICY,
     TREE_FINGERPRINT_POLICY,
     HoldoutCertification,
     HoldoutSample,
@@ -3224,6 +3225,11 @@ _TREE_DIGEST_DOMAIN = (
     + TREE_FINGERPRINT_POLICY.encode("ascii")
     + b"\0"
 )
+_TREE_CONTENT_DIGEST_DOMAIN = (
+    b"repomin-tree-content-fingerprint\0"
+    + TREE_CONTENT_FINGERPRINT_POLICY.encode("ascii")
+    + b"\0"
+)
 
 
 def _tree_digest(
@@ -3236,6 +3242,35 @@ def _tree_digest(
     try:
         _validate_repository_entries(root, ignores if ignores is not None else set())
         return _compute_tree_digest(root, ignores)
+    except BaseException as exc:
+        primary_error = exc
+        raise
+    finally:
+        if normalize_atimes:
+            try:
+                _normalize_tree_atimes(root)
+            except BaseException:
+                if primary_error is None:
+                    raise
+
+
+def _tree_content_digest(
+    root: Path,
+    ignores: Optional[Set[str]] = None,
+    *,
+    normalize_atimes: bool = True,
+) -> str:
+    """Hash portable tree content while omitting transport-volatile metadata.
+
+    The complete ``tree-sha256-v2`` fingerprint remains the authoritative
+    local/session identity. This companion digest is intentionally limited to
+    paths, entry kinds, file contents, and symlink targets so common archive
+    transports that rewrite mtimes can still verify what was transferred.
+    """
+    primary_error: Optional[BaseException] = None
+    try:
+        _validate_repository_entries(root, ignores if ignores is not None else set())
+        return _compute_tree_content_digest(root, ignores)
     except BaseException as exc:
         primary_error = exc
         raise
@@ -3334,6 +3369,49 @@ def _compute_tree_digest(
                 b"C",
                 int(stat_result.st_rdev).to_bytes(8, byteorder="big", signed=False),
             )
+        else:
+            _update_tree_digest_field(digest, b"C", b"")
+        digest.update(b"Z")
+    digest.update(b"X")
+    return digest.hexdigest()
+
+
+def _compute_tree_content_digest(
+    root: Path,
+    ignores: Optional[Set[str]] = None,
+) -> str:
+    """Compute the transport-friendly content fingerprint for one safe tree."""
+    digest = hashlib.sha256()
+    digest.update(_TREE_CONTENT_DIGEST_DOMAIN)
+    ignored = ignores if ignores is not None else set()
+    paths = [
+        (
+            path,
+            path.relative_to(root)
+            .as_posix()
+            .encode("utf-8", errors="surrogateescape"),
+        )
+        for path in root.rglob("*")
+        if not _is_ignored(path.relative_to(root), ignored)
+    ]
+    paths.sort(key=lambda item: item[1])
+    entries = [(root, b"")] + paths
+    _update_tree_digest_field(
+        digest,
+        b"N",
+        len(entries).to_bytes(8, byteorder="big", signed=False),
+    )
+    for path, relative in entries:
+        stat_result = path.lstat()
+        digest.update(b"E")
+        _update_tree_digest_field(digest, b"P", relative)
+        kind = _tree_entry_kind(stat_result.st_mode)
+        _update_tree_digest_field(digest, b"T", kind)
+        if kind == b"symlink":
+            target = os.readlink(path).encode("utf-8", errors="surrogateescape")
+            _update_tree_digest_field(digest, b"C", target)
+        elif kind == b"regular-file":
+            _update_tree_digest_file_content(digest, path, stat_result)
         else:
             _update_tree_digest_field(digest, b"C", b"")
         digest.update(b"Z")

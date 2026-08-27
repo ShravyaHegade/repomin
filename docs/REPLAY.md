@@ -40,9 +40,13 @@ runs.
 Before executing the command, replay validates the report schema and its
 accounting, checks the payload's reported file and byte counts, and verifies
 the available payload tree fingerprint. After the runs, it verifies the
-fingerprint again. A mismatch or an invalid report, payload, or runner setup
-stops replay with an invocation error rather than producing a misleading
-failure result.
+fingerprint again. A local export normally gets an `exact` match against the
+complete tree fingerprint. If an archive transport rewrote filesystem
+metadata such as `mtime`, replay can use the recorded content fingerprint and
+reports `content` mode; that proves the paths, entry kinds, file contents, and
+symlink targets match, while metadata equivalence is no longer claimed. A
+mismatch or an invalid report, payload, or runner setup stops replay with an
+invocation error rather than producing a misleading failure result.
 
 Reports generated before payload fingerprints were recorded can still be
 replayed, but the result identifies the fingerprint as unavailable.
@@ -127,7 +131,9 @@ environment and execution boundary.
 Normal output summarizes the reproduction result, fresh-run counts, backend,
 and fingerprint status. With `--json`, the result is machine-readable and
 includes per-run scalar evidence and output digests, but omits raw stdout,
-stderr, command output, and environment values.
+stderr, command output, and environment values. The JSON `fingerprint_mode`
+field is `exact`, `content`, or `unavailable`; `metadata_drift_possible` is
+true only for content mode.
 
 | Exit code | Meaning |
 | --- | --- |

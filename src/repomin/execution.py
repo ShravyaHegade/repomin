@@ -502,10 +502,6 @@ class DockerRunner:
             "type=bind,source=%s,target=/workspace" % source,
             "--workdir",
             "/workspace",
-            "--env",
-            "REPOMIN=1",
-            "--env",
-            "HOME=/tmp",
         ]
         if self.cpus is not None:
             command.extend(["--cpus", str(self.cpus)])
@@ -532,6 +528,16 @@ class DockerRunner:
                     "invalid NUL in container environment variable: %s" % name
                 )
             command.extend(["--env", "%s=%s" % (name, value)])
+        # Keep these runner-owned values last so an explicit environment map
+        # cannot override the fixed container contract.
+        command.extend(
+            [
+                "--env",
+                "REPOMIN=1",
+                "--env",
+                "HOME=/tmp",
+            ]
+        )
         execution_image = self.resolved_image_id or self.image_reference
         command.extend([execution_image, "/bin/sh", "-c", self.command])
         return command

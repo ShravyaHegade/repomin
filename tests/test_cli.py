@@ -12,6 +12,7 @@ import tempfile
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path, PurePosixPath
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from repomin.cli import (
@@ -572,6 +573,13 @@ class CliTest(unittest.TestCase):
             with self.subTest(value=value):
                 with self.assertRaises(argparse.ArgumentTypeError):
                     _parse_environment(value)
+
+    def test_environment_mapping_rejects_case_collisions_on_windows(self) -> None:
+        from repomin.cli import _environment_mapping
+
+        with patch("repomin.cli.os", SimpleNamespace(name="nt")):
+            with self.assertRaisesRegex(ValueError, "unambiguous"):
+                _environment_mapping([("Path", "one"), ("PATH", "two")])
 
     def test_ignore_paths_are_exact_repository_relative_paths(self) -> None:
         self.assertEqual("services/api/private", _parse_ignore_path("services/api/private"))
@@ -1740,6 +1748,11 @@ class CliTest(unittest.TestCase):
             self.assertEqual(0, report["output"]["bytes"])
             self.assertEqual("tree-sha256-v2", report["output"]["tree_fingerprint_policy"])
             self.assertEqual(64, len(report["output"]["tree_sha256"]))
+            self.assertEqual(
+                "tree-content-sha256-v1",
+                report["output"]["tree_content_fingerprint_policy"],
+            )
+            self.assertEqual(64, len(report["output"]["tree_content_sha256"]))
             certification = report["holdout_certification"]
             self.assertEqual("certified", certification["status"])
             self.assertEqual(

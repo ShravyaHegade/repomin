@@ -12,6 +12,10 @@ CANDIDATE_FAMILY_CONTROL_POLICY = "harmonic-alpha-spending-v1"
 REDUCTION_STRATEGY = "hierarchical-fixed-point-v2"
 HOLDOUT_CERTIFICATION_POLICY = "fixed-n-clopper-pearson-one-sided-v1"
 TREE_FINGERPRINT_POLICY = "tree-sha256-v2"
+# A transport-friendly digest used when artifact stores rewrite filesystem
+# metadata such as modification times. It intentionally covers content,
+# paths, and entry kinds, but not mutable filesystem metadata.
+TREE_CONTENT_FINGERPRINT_POLICY = "tree-content-sha256-v1"
 
 
 @dataclass(frozen=True)

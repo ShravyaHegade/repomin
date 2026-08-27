@@ -52,6 +52,7 @@ from repomin.reducer import FileReducer
 from repomin.ruby_manifest import RubyManifestReducer
 from repomin.report import (
     ReportValidationError,
+    _payload_fingerprint_evidence,
     measure_tree,
     validate_report_file,
     verify_existing_report,
@@ -349,9 +350,17 @@ def _parse_environment(value: str) -> Tuple[str, str]:
 
 def _environment_mapping(entries: Sequence[Tuple[str, str]]) -> dict:
     values = {}
+    normalized_names = set()
     for name, value in entries:
         if name in values:
             raise ValueError("environment variable specified more than once: %s" % name)
+        normalized = name.casefold() if os.name == "nt" else name
+        if normalized in normalized_names:
+            raise ValueError(
+                "environment variable names must be unambiguous on this platform: %s"
+                % name
+            )
+        normalized_names.add(normalized)
         values[name] = value
     return values
 
@@ -1566,10 +1575,11 @@ def _report_validate_command(argv: Sequence[str]) -> int:
     if args.payload is not None:
         result["payload"] = str(args.payload.resolve())
         result["payload_checked"] = True
-        result["payload_fingerprint_verified"] = bool(
-            output.get("tree_sha256")
-            or report["holdout_certification"].get("artifact_fingerprint")
+        fingerprint_mode, _actual_full, _actual_content = (
+            _payload_fingerprint_evidence(report, args.payload)
         )
+        result["payload_fingerprint_mode"] = fingerprint_mode
+        result["payload_fingerprint_verified"] = fingerprint_mode != "unavailable"
     if args.json:
         print(json.dumps(result, sort_keys=True))
     else:

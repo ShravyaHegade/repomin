@@ -468,6 +468,26 @@ time.sleep(10)
             argv[-4:],
         )
 
+    def test_docker_runner_keeps_runner_owned_home_last(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runner = DockerRunner(
+                "true",
+                timeout_seconds=1,
+                image="repomin-fixture:local",
+                environment={"HOME": "/host-controlled"},
+                executable="/fake/docker",
+            )
+            argv = list(runner.build_argv(root, root / "container.cid"))
+
+        env_values = [
+            argv[index + 1]
+            for index, value in enumerate(argv[:-1])
+            if value == "--env"
+        ]
+        self.assertIn("HOME=/host-controlled", env_values)
+        self.assertEqual("HOME=/tmp", env_values[-1])
+
     def test_docker_validation_pins_execution_to_the_resolved_image_id(self) -> None:
         image_id = "sha256:" + "a" * 64
         runner = DockerRunner(

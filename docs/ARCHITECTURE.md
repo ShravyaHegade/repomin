@@ -832,6 +832,17 @@ reduction configuration and provenance, including the input-control knobs
 Secrets are never written: explicit environment variables appear only as sorted
 names plus a SHA-256 digest, and the semantic bearer token is never stored.
 
+Every exported payload records two independent tree digests. The authoritative
+`tree-sha256-v2` fingerprint includes entry metadata and is used for local
+identity, session checkpoints, and holdout certification. The additive
+`tree-content-sha256-v1` fingerprint covers paths, entry kinds, regular-file
+bytes, and symlink targets while omitting transport-volatile metadata such as
+modification times. Consumers first require an exact match; when an archive
+store has rewritten metadata, they may accept a content match only while
+labeling the evidence as `content` and exposing that metadata drift is
+possible. A content match never upgrades the weaker evidence into a claim that
+the original filesystem metadata or execution environment was reproduced.
+
 `phase_statistics` carries one entry per reducer phase with additive counters
 `attempts`, `no_op`, `rejected`, `accepted`, `superseded`, and `aborted`, plus
 wall-clock and byte accounting and oracle sample/cache counters. The identity

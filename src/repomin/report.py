@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
 from pathlib import Path
 from typing import Dict, Optional, Tuple
@@ -11,9 +12,10 @@ from repomin.model import (
     FailureSpec,
     ProcessFailureSignature,
     ReductionResult,
+    TREE_CONTENT_FINGERPRINT_POLICY,
     TREE_FINGERPRINT_POLICY,
 )
-from repomin.session import _tree_digest
+from repomin.session import _tree_content_digest, _tree_digest
 from repomin.signature import (
     process_failure_name,
     valid_recorded_process_failure_signature,
@@ -22,6 +24,7 @@ from repomin.signature import (
 
 REPORT_SCHEMA_VERSION = 1
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_ENVIRONMENT_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 class ReportValidationError(ValueError):
@@ -32,7 +35,11 @@ def validate_report_document(report: object) -> Dict[str, object]:
     """Validate the stable, machine-readable invariants of one report."""
     if not isinstance(report, dict):
         raise ReportValidationError("report root must be a JSON object")
-    if report.get("schema_version") != REPORT_SCHEMA_VERSION:
+    if (
+        isinstance(report.get("schema_version"), bool)
+        or not isinstance(report.get("schema_version"), int)
+        or report.get("schema_version") != REPORT_SCHEMA_VERSION
+    ):
         raise ReportValidationError(
             "unsupported report schema_version: %r" % report.get("schema_version")
         )
@@ -64,6 +71,21 @@ def validate_report_document(report: object) -> Dict[str, object]:
         raise ReportValidationError(
             "output.tree_fingerprint_policy is unsupported or missing"
         )
+    content_sha256 = output.get("tree_content_sha256")
+    if content_sha256 is not None and (
+        not isinstance(content_sha256, str)
+        or _SHA256.fullmatch(content_sha256) is None
+    ):
+        raise ReportValidationError("output.tree_content_sha256 must be SHA-256")
+    content_policy = output.get("tree_content_fingerprint_policy")
+    if content_sha256 is None and content_policy is not None:
+        raise ReportValidationError(
+            "output.tree_content_fingerprint_policy requires tree_content_sha256"
+        )
+    if content_sha256 is not None and content_policy != TREE_CONTENT_FINGERPRINT_POLICY:
+        raise ReportValidationError(
+            "output.tree_content_fingerprint_policy is unsupported or missing"
+        )
     for name in ("attempts", "accepted_mutations", "cache_hits"):
         _require_nonnegative_int(report, name)
 
@@ -79,11 +101,13 @@ def validate_report_document(report: object) -> Dict[str, object]:
         if timeout <= 0.0:
             raise ReportValidationError("execution.timeout_seconds must be positive")
     _validate_execution_limits(execution)
+    _validate_execution_environment(execution)
 
     _validate_failure_spec(report)
     _validate_failure_signatures(report)
 
     phases = _require_object(report, "phase_statistics")
+    _validate_optional_schema_version(phases, "phase_statistics")
     coverage = phases.get("coverage")
     if coverage not in {"complete", "partial"}:
         raise ReportValidationError(
@@ -154,8 +178,10 @@ def validate_report_document(report: object) -> Dict[str, object]:
             raise ReportValidationError("%s oracle passes exceed runs" % context)
         oracle_rate = _require_optional_probability(event, "oracle_rate", context)
         if oracle_rate is not None:
-            if oracle_runs == 0 or not math.isclose(
-                oracle_rate, float(oracle_passes) / oracle_runs, rel_tol=1e-12
+            if not _ratio_matches(
+                oracle_rate,
+                oracle_passes,
+                oracle_runs,
             ):
                 raise ReportValidationError(
                     "%s oracle_rate does not match pass/run counts" % context
@@ -187,6 +213,7 @@ def validate_report_document(report: object) -> Dict[str, object]:
             )
 
     holdout = _require_object(report, "holdout_certification")
+    _validate_optional_schema_version(holdout, "holdout_certification")
     status = _require_text(holdout, "status", non_empty=True)
     allowed_statuses = {
         "not_requested",
@@ -248,9 +275,7 @@ def validate_report_document(report: object) -> Dict[str, object]:
         holdout, "observed_rate", "holdout_certification"
     )
     if observed_rate is not None:
-        if planned == 0 or not math.isclose(
-            observed_rate, float(passes) / planned, rel_tol=1e-12
-        ):
+        if not _ratio_matches(observed_rate, passes, planned):
             raise ReportValidationError(
                 "holdout observed_rate does not match pass/run counts"
             )
@@ -417,6 +442,11 @@ def validate_report_document(report: object) -> Dict[str, object]:
         raise ReportValidationError(
             "certified holdout must include artifact_fingerprint"
         )
+    artifact_policy = holdout.get("artifact_fingerprint_policy")
+    if artifact_policy is not None and artifact_policy != TREE_FINGERPRINT_POLICY:
+        raise ReportValidationError(
+            "holdout artifact_fingerprint_policy is unsupported"
+        )
     if fingerprint is not None and tree_sha256 is not None and fingerprint != tree_sha256:
         raise ReportValidationError(
             "output tree fingerprint differs from holdout artifact fingerprint"
@@ -441,23 +471,53 @@ def validate_report_file(
     assert isinstance(holdout, dict)
     output = report["output"]
     assert isinstance(output, dict)
-    expected = output.get("tree_sha256") or holdout.get("artifact_fingerprint")
     if payload is not None:
         if payload.is_symlink():
             raise ReportValidationError("payload root must not be a symbolic link")
         if not payload.is_dir():
             raise ReportValidationError("payload is not a directory: %s" % payload)
-        actual = _tree_digest(payload, set())
-        if expected is not None and actual != expected:
-            raise ReportValidationError(
-                "payload fingerprint differs from report: %s" % payload
-            )
+        _payload_fingerprint_evidence(report, payload)
         files, size = measure_tree(payload)
         if files != output["files"] or size != output["bytes"]:
             raise ReportValidationError(
                 "payload size differs from report: %s" % payload
             )
     return report
+
+
+def _payload_fingerprint_evidence(
+    report: Dict[str, object],
+    payload: Path,
+) -> Tuple[str, str, Optional[str]]:
+    """Return ``(mode, full_digest, content_digest)`` for one payload.
+
+    ``exact`` means the complete local tree fingerprint matched. ``content``
+    is a deliberate fallback for archive transports that rewrite filesystem
+    metadata; callers should surface that metadata may have drifted.
+    ``unavailable`` is retained for legacy reports without either digest.
+    """
+    output = report["output"]
+    holdout = report["holdout_certification"]
+    assert isinstance(output, dict)
+    assert isinstance(holdout, dict)
+    expected_full = output.get("tree_sha256") or holdout.get("artifact_fingerprint")
+    expected_content = output.get("tree_content_sha256")
+    actual_full = _tree_digest(payload, set())
+    if expected_full is not None and actual_full == expected_full:
+        return "exact", actual_full, None
+
+    if expected_content is not None:
+        actual_content = _tree_content_digest(payload, set())
+        if actual_content == expected_content:
+            return "content", actual_full, actual_content
+        raise ReportValidationError(
+            "payload fingerprint differs from report: %s" % payload
+        )
+    if expected_full is not None:
+        raise ReportValidationError(
+            "payload fingerprint differs from report: %s" % payload
+        )
+    return "unavailable", actual_full, None
 
 
 def _require_object(parent: Dict[str, object], name: str) -> Dict[str, object]:
@@ -467,13 +527,28 @@ def _require_object(parent: Dict[str, object], name: str) -> Dict[str, object]:
     return value
 
 
-def _validate_failure_spec(report: Dict[str, object]) -> None:
-    value = report.get("failure_spec")
-    if value is None:
+def _validate_optional_schema_version(
+    section: Dict[str, object], name: str
+) -> None:
+    """Validate additive section versions while keeping legacy omissions valid."""
+    if "schema_version" not in section:
         return
+    value = section["schema_version"]
+    if isinstance(value, bool) or not isinstance(value, int) or value != 1:
+        raise ReportValidationError("%s.schema_version must be 1" % name)
+
+
+def _validate_failure_spec(report: Dict[str, object]) -> None:
+    if "failure_spec" not in report:
+        return
+    value = report["failure_spec"]
     if not isinstance(value, dict):
         raise ReportValidationError("failure_spec must be an object")
-    if value.get("schema_version") != 1:
+    if (
+        isinstance(value.get("schema_version"), bool)
+        or not isinstance(value.get("schema_version"), int)
+        or value.get("schema_version") != 1
+    ):
         raise ReportValidationError("failure_spec.schema_version must be 1")
     for name in ("match", "exit_code"):
         if name not in value:
@@ -623,6 +698,33 @@ def _validate_execution_limits(execution: Dict[str, object]) -> None:
             )
 
 
+def _validate_execution_environment(execution: Dict[str, object]) -> None:
+    """Validate explicit environment metadata without requiring legacy fields."""
+    if "environment_names" in execution:
+        names = execution["environment_names"]
+        if (
+            not isinstance(names, list)
+            or any(
+                not isinstance(name, str)
+                or _ENVIRONMENT_NAME.fullmatch(name) is None
+                or name == "REPOMIN"
+                for name in names
+            )
+            or _has_ambiguous_environment_names(names)
+        ):
+            raise ReportValidationError(
+                "execution.environment_names contains invalid or ambiguous names"
+            )
+    if "environment_sha256" in execution:
+        digest = execution["environment_sha256"]
+        if digest is not None and (
+            not isinstance(digest, str) or _SHA256.fullmatch(digest) is None
+        ):
+            raise ReportValidationError(
+                "execution.environment_sha256 must be SHA-256 or null"
+            )
+
+
 def _require_text(
     parent: Dict[str, object], name: str, *, non_empty: bool = False
 ) -> str:
@@ -708,6 +810,25 @@ def _require_optional_probability(
         prefix = (context + ".") if context else ""
         raise ReportValidationError("%s%s must be at most 1" % (prefix, name))
     return value
+
+
+def _ratio_matches(observed: float, numerator: int, denominator: int) -> bool:
+    """Compare a serialized ratio without allowing huge integers to escape."""
+    if denominator == 0:
+        return False
+    try:
+        expected = float(numerator) / denominator
+    except (OverflowError, ZeroDivisionError):
+        return False
+    return math.isclose(observed, expected, rel_tol=1e-12)
+
+
+def _has_ambiguous_environment_names(names: list[str]) -> bool:
+    """Reject names that map to one variable on the current host platform."""
+    if os.name != "nt":
+        return len(set(names)) != len(names)
+    folded = [name.casefold() for name in names]
+    return len(set(folded)) != len(folded)
 
 
 def measure_tree(root: Path) -> Tuple[int, int]:
@@ -802,6 +923,9 @@ def verify_existing_report(
             if "tree_sha256" not in actual_output:
                 expected_output.pop("tree_sha256", None)
                 expected_output.pop("tree_fingerprint_policy", None)
+            if "tree_content_sha256" not in actual_output:
+                expected_output.pop("tree_content_sha256", None)
+                expected_output.pop("tree_content_fingerprint_policy", None)
     # A report may have been fully written immediately before the process
     # crashed. Restoration itself changes only these provenance booleans.
     for report in (actual_report, expected_report):
@@ -835,6 +959,11 @@ def _build_report(
     holdout = result.holdout_certification
     output_fingerprint = (
         _tree_digest(result.output, set())
+        if result.output.is_dir() and not result.output.is_symlink()
+        else None
+    )
+    output_content_fingerprint = (
+        _tree_content_digest(result.output, set())
         if result.output.is_dir() and not result.output.is_symlink()
         else None
     )
@@ -1027,6 +1156,11 @@ def _build_report(
     if output_fingerprint is not None:
         output["tree_sha256"] = output_fingerprint
         output["tree_fingerprint_policy"] = TREE_FINGERPRINT_POLICY
+    if output_content_fingerprint is not None:
+        output["tree_content_sha256"] = output_content_fingerprint
+        output["tree_content_fingerprint_policy"] = (
+            TREE_CONTENT_FINGERPRINT_POLICY
+        )
     if failure_spec is not None:
         report["failure_spec"] = {
             "schema_version": 1,

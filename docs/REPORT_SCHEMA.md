@@ -36,7 +36,12 @@ version, and never infer code correctness from a passing oracle.
 `source` and `output` contain `files` and `bytes`. Output counts deliberately
 exclude `report.json` and `REPOMIN.md`. New reports also store
 `output.tree_sha256` and `output.tree_fingerprint_policy` for every exported
-payload, independently of optional holdout certification.
+payload, independently of optional holdout certification. They also store
+`output.tree_content_sha256` with the `tree-content-sha256-v1` policy. The
+complete fingerprint includes filesystem metadata and is authoritative for a
+local export; the content fingerprint covers paths, entry kinds, file contents,
+and symlink targets so archive transports that rewrite mtimes can still be
+checked. A consumer should label that case as content-only verification.
 
 ## Failure contract
 
@@ -138,7 +143,8 @@ matching failure signature.
 ## Consumer guidance
 
 1. Verify `schema_version`, output file/byte counts, and the exported payload
-   fingerprint before trusting an artifact.
+   fingerprint before trusting an artifact. A content-only match means
+   transport metadata may have changed.
 2. Check `execution.backend`, Docker identity/policy, environment names, and
    the reproduction command before sharing the sidecar.
 3. Treat `failure_match` and signatures as the configured oracle contract, not
@@ -165,7 +171,8 @@ byte counts, `attempts`, `accepted_mutations`, and `cache_hits`. The version is
 `null` for legacy reports that predate version provenance. These fields are
 descriptive metadata copied from the validated report; they do not add a new
 correctness claim. `payload_fingerprint_verified` distinguishes a cryptographic
-tree match from count-only validation of a legacy report.
+tree match from count-only validation of a legacy report, and
+`payload_fingerprint_mode` is `exact`, `content`, or `unavailable`.
 
 After reviewing the unsigned command in a report, consumers can also run a
 fresh-copy [replay](REPLAY.md):

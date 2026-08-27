@@ -43,6 +43,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   checks, private JSON evidence, and explicit command acknowledgement.
 - New reports now preserve the exact `failure_spec`, per-command timeout, and a
   tree fingerprint for every exported payload, not only certified holdouts.
+- Reports also include a transport-friendly content fingerprint so downloaded
+  CI artifacts can be verified when archive storage rewrites filesystem times;
+  replay labels this as content-only evidence.
+- Replay and report validation now reject malformed working-directory metadata,
+  ambiguous case-insensitive environment names, and attempts to override
+  runner-owned Docker environment values.
 - The GitHub Action now uses the runner temporary directory when `output` is
   omitted, so the default `source: .` workflow does not place reducer output
   inside the repository. It also exposes metadata-path and source/output byte

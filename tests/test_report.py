@@ -1,7 +1,10 @@
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest import mock
 
 from repomin.cli import main
 from repomin.model import FailureSpec, ReductionResult, ReductionStats, RunResult
@@ -12,7 +15,7 @@ from repomin.report import (
     validate_report_document,
     validate_report_file,
 )
-from repomin.session import _tree_digest
+from repomin.session import _tree_content_digest, _tree_digest
 
 
 def _report() -> dict:
@@ -92,6 +95,40 @@ class ReportValidationTest(unittest.TestCase):
             )
             self.assertIs(validate_report_document(report), report)
 
+    def test_transport_content_fingerprint_survives_mtime_rewrite(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = root / "reduced"
+            metadata = root / "reduced.repomin"
+            output.mkdir()
+            metadata.mkdir()
+            entry = output / "case.txt"
+            entry.write_text("failure\n", encoding="utf-8")
+            result = ReductionResult(
+                output=output,
+                stats=ReductionStats(
+                    source_files=1,
+                    source_bytes=8,
+                    output_files=1,
+                    output_bytes=8,
+                ),
+                baseline=RunResult(7, "", "failure", 0.0),
+                final_run=RunResult(7, "", "failure", 0.0),
+            )
+            report = _build_report(result, "python3 reproduce.py", "failure")
+            report_path = metadata / "report.json"
+            report_path.write_text(json.dumps(report), encoding="utf-8")
+            original_full = report["output"]["tree_sha256"]
+            content_digest = report["output"]["tree_content_sha256"]
+            status = entry.stat()
+            os.utime(
+                entry,
+                ns=(status.st_atime_ns, status.st_mtime_ns + 1000000),
+            )
+            self.assertNotEqual(original_full, _tree_digest(output, set()))
+            self.assertEqual(content_digest, _tree_content_digest(output, set()))
+            validate_report_file(report_path, output)
+
     def test_rejects_inconsistent_replay_contract(self) -> None:
         report = _report()
         report["failure_spec"] = {
@@ -105,10 +142,50 @@ class ReportValidationTest(unittest.TestCase):
         with self.assertRaisesRegex(ReportValidationError, "failure_match"):
             validate_report_document(report)
 
+        report = _report()
+        report["failure_spec"] = None
+        with self.assertRaisesRegex(ReportValidationError, "failure_spec"):
+            validate_report_document(report)
+
     def test_rejects_orphaned_output_fingerprint_policy(self) -> None:
         report = _report()
         report["output"]["tree_fingerprint_policy"] = "tree-sha256-v2"
         with self.assertRaisesRegex(ReportValidationError, "requires tree_sha256"):
+            validate_report_document(report)
+
+    def test_rejects_unrepresentably_large_rate_counts(self) -> None:
+        report = _report()
+        report["events"] = [
+            {
+                "phase": "files",
+                "description": "large-count fixture",
+                "duration_seconds": 0.0,
+                "oracle_runs": 10**1000,
+                "oracle_passes": 10**1000,
+                "oracle_rate": 1.0,
+            }
+        ]
+        with self.assertRaisesRegex(ReportValidationError, "oracle_rate"):
+            validate_report_document(report)
+
+        report = _report()
+        holdout = report["holdout_certification"]
+        huge = 10**1000
+        holdout.update(
+            {
+                "planned_runs": huge,
+                "completed_runs": huge,
+                "passes": huge,
+                "minimum_rate": 0.1,
+                "confidence": 0.9,
+                "required_passes": huge,
+                "observed_rate": 1.0,
+                "exact_lower_bound": 0.1,
+                "exact_p_value": 0.1,
+                "exact_rate_gate_passed": True,
+            }
+        )
+        with self.assertRaisesRegex(ReportValidationError, "observed_rate"):
             validate_report_document(report)
 
     def test_generated_report_records_repomin_version(self) -> None:
@@ -132,6 +209,44 @@ class ReportValidationTest(unittest.TestCase):
         report["repomin_version"] = ""
         with self.assertRaisesRegex(ReportValidationError, "repomin_version"):
             validate_report_document(report)
+
+    def test_schema_versions_must_be_integer_one(self) -> None:
+        for path, value in (
+            (("schema_version",), True),
+            (("schema_version",), 1.0),
+            (("phase_statistics", "schema_version"), True),
+            (("holdout_certification", "schema_version"), None),
+        ):
+            report = _report()
+            section = report
+            for key in path[:-1]:
+                section = section[key]
+            section[path[-1]] = value
+            with self.subTest(path=path, value=value):
+                with self.assertRaisesRegex(ReportValidationError, "schema_version"):
+                    validate_report_document(report)
+
+    def test_execution_environment_metadata_is_structurally_validated(self) -> None:
+        report = _report()
+        report["execution"]["environment_names"] = ["GOOD", "GOOD"]
+        with self.assertRaisesRegex(ReportValidationError, "environment_names"):
+            validate_report_document(report)
+
+        report = _report()
+        report["execution"]["environment_names"] = ["BAD-NAME"]
+        with self.assertRaisesRegex(ReportValidationError, "environment_names"):
+            validate_report_document(report)
+
+        report = _report()
+        report["execution"]["environment_sha256"] = "not-a-digest"
+        with self.assertRaisesRegex(ReportValidationError, "environment_sha256"):
+            validate_report_document(report)
+
+        report = _report()
+        report["execution"]["environment_names"] = ["Path", "PATH"]
+        with mock.patch("repomin.report.os", SimpleNamespace(name="nt")):
+            with self.assertRaisesRegex(ReportValidationError, "ambiguous"):
+                validate_report_document(report)
 
     def test_rejects_malformed_events(self) -> None:
         report = _report()
@@ -360,7 +475,9 @@ class ReportValidationTest(unittest.TestCase):
             metadata = root / "reduced.repomin"
             payload.mkdir()
             metadata.mkdir()
-            (payload / "required.txt").write_text("keep\n", encoding="utf-8")
+            # Use bytes so the reported size is identical on Windows, where
+            # text-mode writes translate ``\n`` to ``\r\n``.
+            (payload / "required.txt").write_bytes(b"keep\n")
             report = _report()
             report["holdout_certification"] = {
                 "status": "certified",

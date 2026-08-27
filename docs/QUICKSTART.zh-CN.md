@@ -109,6 +109,8 @@ repomin report replay "$demo_dir/reduced.repomin/report.json" \
 报告本身没有签名，里面的 `command` 可能执行任意代码。`--yes` 只是确认你已
 审阅命令，并不提供沙箱。退出码 `0` 只表示当前环境下所有 replay 都匹配 oracle，
 不是正确性、根因或生产可靠性证明。详细边界见[重放指南](REPLAY.md)。
+从 CI artifact 下载后，如果存储系统改写了文件时间，结果可能标记为
+`content` fingerprint mode；这表示内容和路径一致，但不再声称文件系统元数据完全一致。
 
 ## Oracle 是什么
 

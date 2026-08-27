@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+import os
 import re
 import tempfile
 from pathlib import Path
@@ -17,11 +18,16 @@ from repomin.model import (
     PythonExceptionSignature,
 )
 from repomin.oracle import FailureOracle
-from repomin.report import measure_tree, validate_report_file
+from repomin.report import (
+    _payload_fingerprint_evidence,
+    measure_tree,
+    validate_report_file,
+)
 from repomin.session import (
     _cleanup_tool_owned_paths,
     _copy_repository,
     _run_observation_digest,
+    _tree_content_digest,
     _tree_digest,
 )
 
@@ -61,9 +67,17 @@ def replay_report(
     assert isinstance(output, dict)
     assert isinstance(holdout, dict)
 
-    initial_fingerprint = _tree_digest(payload, set())
+    fingerprint_mode, initial_full_fingerprint, initial_content_fingerprint = (
+        _payload_fingerprint_evidence(report, payload)
+    )
     expected_fingerprint = output.get("tree_sha256") or holdout.get(
         "artifact_fingerprint"
+    )
+    expected_content_fingerprint = output.get("tree_content_sha256")
+    initial_fingerprint = (
+        initial_content_fingerprint
+        if fingerprint_mode == "content"
+        else initial_full_fingerprint
     )
     measured_files, measured_bytes = measure_tree(payload)
     if measured_files != output["files"] or measured_bytes != output["bytes"]:
@@ -110,7 +124,12 @@ def replay_report(
     samples = []
     try:
         for index in range(1, runs + 1):
-            if _tree_digest(payload, set()) != initial_fingerprint:
+            current_fingerprint = (
+                _tree_content_digest(payload, set())
+                if fingerprint_mode == "content"
+                else _tree_digest(payload, set())
+            )
+            if current_fingerprint != initial_fingerprint:
                 raise ReplayError("payload changed while replay was running")
             attempt_root = temporary_root / ("run-%04d" % index)
             attempt_root.mkdir()
@@ -144,7 +163,17 @@ def replay_report(
     finally:
         _cleanup_tool_owned_paths([temporary_root], "replay temporary directory")
 
-    final_fingerprint = _tree_digest(payload, set())
+    final_full_fingerprint = _tree_digest(payload, set())
+    final_content_fingerprint = (
+        _tree_content_digest(payload, set())
+        if fingerprint_mode == "content"
+        else None
+    )
+    final_fingerprint = (
+        final_content_fingerprint
+        if fingerprint_mode == "content"
+        else final_full_fingerprint
+    )
     if final_fingerprint != initial_fingerprint:
         raise ReplayError("payload changed while replay was running")
     passes = sum(sample["accepted"] is True for sample in samples)
@@ -171,8 +200,12 @@ def replay_report(
         "ambient_environment_pinned": False,
         "environment_names": sorted(configured_environment),
         "expected_fingerprint": expected_fingerprint,
-        "actual_fingerprint": final_fingerprint,
-        "fingerprint_verified": expected_fingerprint is not None,
+        "actual_fingerprint": final_full_fingerprint,
+        "expected_content_fingerprint": expected_content_fingerprint,
+        "actual_content_fingerprint": final_content_fingerprint,
+        "fingerprint_mode": fingerprint_mode,
+        "metadata_drift_possible": fingerprint_mode == "content",
+        "fingerprint_verified": fingerprint_mode != "unavailable",
         "samples": samples,
     }
     result.update(runner_evidence)
@@ -188,8 +221,13 @@ def format_replay(result: Mapping[str, object]) -> str:
         "Backend: %s (recorded: %s)"
         % (result.get("backend"), result.get("recorded_backend")),
     ]
-    if result.get("fingerprint_verified"):
+    fingerprint_mode = result.get("fingerprint_mode")
+    if fingerprint_mode == "exact":
         lines.append("Payload fingerprint: verified")
+    elif fingerprint_mode == "content":
+        lines.append(
+            "Payload fingerprint: content verified (metadata may have drifted)"
+        )
     else:
         lines.append("Payload fingerprint: unavailable in this legacy report")
     if not reproduced:
@@ -271,9 +309,12 @@ def _validate_environment(
             or name == "REPOMIN"
             for name in names
         )
-        or len(set(names)) != len(names)
+        or _has_ambiguous_environment_names(names)
+        or _has_ambiguous_environment_names(list(environment))
     ):
-        raise ReplayError("report contains invalid environment variable names")
+        raise ReplayError(
+            "report contains invalid or case-insensitive duplicate environment names"
+        )
     if set(environment) != set(names):
         raise ReplayError(
             "replay environment names must exactly match the report: %s"
@@ -281,6 +322,10 @@ def _validate_environment(
         )
     expected = execution.get("environment_sha256")
     if expected is None:
+        if names:
+            raise ReplayError(
+                "report is missing the environment digest for explicit variables"
+            )
         return
     if not isinstance(expected, str) or _SHA256.fullmatch(expected) is None:
         raise ReplayError("report contains an invalid environment digest")
@@ -542,7 +587,11 @@ def _working_basename(
 ) -> str:
     if backend == "docker":
         return "repository"
-    value = execution.get("working_directory_basename") or payload.name
+    if "working_directory_basename" not in execution:
+        # Legacy reports did not persist the host working-directory name.
+        value = payload.name
+    else:
+        value = execution["working_directory_basename"]
     if not isinstance(value, str):
         raise ReplayError("recorded host working directory basename is invalid")
     parsed = Path(value)
@@ -556,6 +605,14 @@ def _working_basename(
     ):
         raise ReplayError("recorded host working directory basename is invalid")
     return value
+
+
+def _has_ambiguous_environment_names(names: list[str]) -> bool:
+    """Detect names that collapse on Windows while retaining exact-name policy."""
+    if os.name != "nt":
+        return len(set(names)) != len(names)
+    folded = [name.casefold() for name in names]
+    return len(set(folded)) != len(folded)
 
 
 def _outcome(result: object, accepted: bool) -> str:
