@@ -23,6 +23,7 @@ def _write(directory: Path, name: str, checks: list[dict[str, object]]) -> Path:
         json.dumps(
             {
                 "schema_version": 1,
+                "repomin_version": "0.1.0.dev4",
                 "python": "3.13.0",
                 "platform": "test",
                 **counts,
@@ -73,6 +74,7 @@ class BenchmarkCompareTest(unittest.TestCase):
         self.assertIsNone(beta["runs"][1])
         self.assertEqual(1.2, comparison["runs"][0]["duration_seconds"])
         self.assertEqual([], comparison["runs"][0]["selection"]["only"])
+        self.assertEqual("0.1.0.dev4", comparison["runs"][0]["repomin_version"])
 
     def test_require_same_selection_rejects_different_filters(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -213,6 +215,7 @@ class BenchmarkCompareTest(unittest.TestCase):
             "runs": [
                 {
                     "path": "one.json",
+                    "repomin_version": "0.1.0.dev4",
                     "platform": "test",
                     "passed": 1,
                     "skipped": 0,
@@ -225,6 +228,7 @@ class BenchmarkCompareTest(unittest.TestCase):
         output = _MODULE.render_text(comparison)
         self.assertIn("descriptive; not a performance claim", output)
         self.assertIn("one.json", output)
+        self.assertIn("repomin=0.1.0.dev4", output)
 
 
 if __name__ == "__main__":

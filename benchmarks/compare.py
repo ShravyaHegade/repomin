@@ -131,6 +131,7 @@ def compare_summaries(
         runs.append(
             {
                 "path": str(path),
+                "repomin_version": summary.get("repomin_version"),
                 "python": summary.get("python"),
                 "platform": summary.get("platform"),
                 "passed": summary["passed"],
@@ -196,10 +197,11 @@ def render_text(comparison: Mapping[str, Any]) -> str:
     ]
     for index, run in enumerate(comparison["runs"], start=1):
         lines.append(
-            "run %d: %s | %s | passed=%d skipped=%d failed=%d total=%.3fs"
+            "run %d: %s | repomin=%s | %s | passed=%d skipped=%d failed=%d total=%.3fs"
             % (
                 index,
                 run["path"],
+                run["repomin_version"] or "unknown",
                 run["platform"],
                 run["passed"],
                 run["skipped"],

@@ -72,11 +72,11 @@ This rejects legacy summaries without selection metadata and summaries created
 with different `--only` or `--exclude` filters. The default comparison remains
 backward-compatible and still reports missing fixtures explicitly.
 
-The text output aligns fixture names across runs and shows status plus elapsed
-time. The JSON output includes per-run counts and descriptive min/median/max
-durations. Missing fixtures are shown explicitly. This is a regression and
-diagnostic aid, not a performance claim; use repeated runs in the same
-environment before drawing speed conclusions.
+The text output aligns fixture names across runs and shows the ReproMin version,
+status, and elapsed time. The JSON output includes per-run counts and
+descriptive min/median/max durations. Missing fixtures are shown explicitly.
+This is a regression and diagnostic aid, not a performance claim; use repeated
+runs in the same environment before drawing speed conclusions.
 
 `maven-multimodule` is a real Maven reactor containing one failing JUnit test,
 one unrelated module, an unused dependency, an unused resource, and unrelated
