@@ -1,0 +1,3 @@
+# The CI runner is included through the runtime requirements chain.
+repomin-ci-runner==4.5.0
+repomin-unused-ci==8.8.8

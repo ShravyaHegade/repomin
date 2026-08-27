@@ -3,6 +3,7 @@ include SECURITY.md
 include SUPPORT.md
 include CONTRIBUTORS.md
 include action.yml
+include scripts/check_contribution.py
 recursive-include docs *.md
 include tests/test_*.py
 
@@ -48,6 +49,12 @@ include benchmarks/text-lines/README.md
 include benchmarks/python-pyproject/pyproject.toml
 include benchmarks/python-pyproject/reproduce.py
 include benchmarks/python-pyproject/README.md
+include benchmarks/python-requirements/requirements.txt
+include benchmarks/python-requirements/requirements/runtime.txt
+include benchmarks/python-requirements/requirements/ci.txt
+include benchmarks/python-requirements/constraints.txt
+include benchmarks/python-requirements/reproduce.py
+include benchmarks/python-requirements/README.md
 include benchmarks/semantic-stub/reproduce.py
 include benchmarks/semantic-stub/data.txt
 include benchmarks/semantic-stub/run.py

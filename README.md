@@ -41,25 +41,82 @@ a security sandbox. For automatic CI artifacts, see the
 
 ReproMin requires Python 3.9 or newer and has no runtime dependencies.
 
+For a copy-paste, network-free workflow, start with the
+[examples guide](docs/EXAMPLES.md). It creates a tiny failing project, reduces
+it, and explains where the payload and evidence report are written.
+
 中文用户可以先阅读[中文快速开始](docs/QUICKSTART.zh-CN.md)，其中包含一个
 可直接运行的最小缩减示例、安全边界和报告说明。
 
 ## Install
 
-The current pre-alpha release is distributed from GitHub, not PyPI yet:
+The current pre-alpha release is distributed from GitHub Releases; it is not
+published to PyPI yet. Use an isolated virtual environment so the `repomin`
+command does not modify your system Python:
 
 ```sh
-python3 -m pip install \
-  https://github.com/fly1d/repomin/releases/download/v0.1.0.dev4/repomin-0.1.0.dev4-py3-none-any.whl
+python3 -m venv .venv
+. .venv/bin/activate                         # macOS/Linux
+python -m pip install --upgrade pip
+REPOMIN_VERSION=0.1.0.dev4
+python -m pip install \
+  "https://github.com/fly1d/repomin/releases/download/v${REPOMIN_VERSION}/repomin-${REPOMIN_VERSION}-py3-none-any.whl"
+python -m repomin --version
 ```
 
-For development, clone the repository and install it in editable mode:
+Windows PowerShell users can create and activate the same kind of environment
+with `py -3 -m venv .venv` and `.venv\Scripts\Activate.ps1`, then install the
+wheel with PowerShell's environment-variable syntax:
+
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\Activate.ps1
+$env:REPOMIN_VERSION = "0.1.0.dev4"
+python -m pip install "https://github.com/fly1d/repomin/releases/download/v${env:REPOMIN_VERSION}/repomin-${env:REPOMIN_VERSION}-py3-none-any.whl"
+python -m repomin --version
+```
+
+If PowerShell blocks `Activate.ps1` because of its execution policy, leave the
+environment unactivated and replace `python` above with
+`.venv\Scripts\python.exe`.
+
+The [release page](https://github.com/fly1d/repomin/releases/tag/v0.1.0.dev4)
+includes SHA-256 checksums for the wheel and source archive; verify the
+downloaded asset there when supply-chain verification is required. The wheel is
+preferred for a quick install because it needs no build step.
+
+To install the source archive instead, keep the same `REPOMIN_VERSION` value:
+
+```sh
+REPOMIN_VERSION=0.1.0.dev4
+python -m pip install \
+  "https://github.com/fly1d/repomin/releases/download/v${REPOMIN_VERSION}/repomin-${REPOMIN_VERSION}.tar.gz"
+```
+
+Pip will create an isolated build environment for the declared build tools.
+
+If your shell cannot find `repomin`, activate `.venv` again or invoke
+`python -m repomin` with the same interpreter used for installation. Confirm
+the selected environment with `python -m pip show repomin`; remove it with
+`python -m pip uninstall repomin` when needed.
+
+For development, clone the repository and install the optional tooling extras in
+editable mode:
 
 ```sh
 git clone https://github.com/fly1d/repomin.git
 cd repomin
-python3 -m pip install -e .
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -e ".[dev]"
+python -m repomin --version
 ```
+
+The plain `python -m pip install -e .` form is also sufficient when you only
+need the package and do not plan to run the lint, coverage, build, or release
+checks. A version-matched source archive is available on the same [release
+page](https://github.com/fly1d/repomin/releases/tag/v0.1.0.dev4) for users who
+need to inspect or build from source.
 
 ### Shell completion
 
@@ -84,6 +141,8 @@ Invoke-Expression (repomin completion powershell | Out-String)
 The completion includes the supported adapter, source reducer, semantic
 backend, Docker policy, and other enum values. Path-bearing options fall back
 to the shell's file completion.
+
+## Reduce a project
 
 ```sh
 python3 -m venv .venv
@@ -1000,9 +1059,8 @@ coverage expands.
 ## Development
 
 ```sh
-PYTHONPATH=src python3 -m unittest discover -s tests -v
-ruff check src tests
-PYTHONPATH=src python3 -m compileall -q src tests
+python3 scripts/check_contribution.py
+python3 scripts/check_contribution.py --with-benchmarks
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for extension points and project rules,

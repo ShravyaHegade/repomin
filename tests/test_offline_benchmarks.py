@@ -1,5 +1,6 @@
 import json
 import importlib.util
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -39,8 +40,23 @@ class OfflineBenchmarkSummaryTest(unittest.TestCase):
 
         names = output.getvalue().splitlines()
         self.assertIn("python-pyproject", names)
+        self.assertIn("python-requirements", names)
         self.assertEqual(len(names), len(set(names)))
         self.assertGreaterEqual(len(names), 10)
+
+    @unittest.skipUnless(os.name == "posix", "requires the POSIX python3 fixture command")
+    def test_python_requirements_fixture_runs_end_to_end(self) -> None:
+        from contextlib import redirect_stdout
+        from io import StringIO
+
+        output = StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(
+                0,
+                _offline_main(["--only", "python-requirements"]),
+            )
+
+        self.assertIn("PASS python-requirements", output.getvalue())
 
     def test_writes_versioned_counts_and_check_details(self) -> None:
         checks = [

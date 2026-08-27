@@ -16,6 +16,10 @@ dates. Concrete contribution tasks live in
   explicit text-file reduction.
 - Network-free regression benchmarks, branch coverage artifacts, installable
   wheel/source-distribution tests, issue templates, and contributor guidance.
+- A requirements-chain benchmark covering nested includes, constraints, and
+  hash-pinned CI dependencies, with an independent oracle check.
+- A dependency-free contributor preflight that isolates lint and bytecode
+  caches, plus release metadata and isolated wheel/source-install checks.
 
 ## Current: contributor feedback
 

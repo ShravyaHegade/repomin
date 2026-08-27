@@ -224,6 +224,69 @@ def _check_text_lines() -> None:
         )
 
 
+def _check_python_requirements() -> None:
+    """Exercise a nested requirements include/constraint chain end to end."""
+    with _run_repomin(
+        "python-requirements",
+        "python",
+        "python3 reproduce.py",
+        [],
+    ) as output:
+        root = (output / "requirements.txt").read_text(encoding="utf-8")
+        runtime = (output / "requirements" / "runtime.txt").read_text(
+            encoding="utf-8"
+        )
+        ci = (output / "requirements" / "ci.txt").read_text(encoding="utf-8")
+        constraints = (output / "constraints.txt").read_text(encoding="utf-8")
+
+        _require(
+            "-r requirements/runtime.txt" in root,
+            "python-requirements lost the runtime include",
+        )
+        _require(
+            "-c constraints.txt" in root,
+            "python-requirements lost the constraints include",
+        )
+        _require(
+            "repomin-runtime==1.2.3" in runtime,
+            "python-requirements lost the required runtime dependency",
+        )
+        _require(
+            "--hash=sha256:" in runtime,
+            "python-requirements lost the runtime hash continuation",
+        )
+        _require(
+            "-r ci.txt" in runtime,
+            "python-requirements lost the CI include",
+        )
+        _require(
+            "repomin-ci-runner==4.5.0" in ci,
+            "python-requirements lost the required CI dependency",
+        )
+        _require(
+            "repomin-runtime<2" in constraints
+            and "repomin-ci-runner<5" in constraints,
+            "python-requirements lost required constraints",
+        )
+
+        all_text = "\n".join((root, runtime, ci, constraints))
+        for token in (
+            "repomin-unused-runtime",
+            "repomin-unused-ci",
+            "repomin-unused-runtime<10",
+            "packages.example.invalid",
+            "mirror.example.invalid",
+        ):
+            _require(token not in all_text, "python-requirements retained %s" % token)
+
+        run = _independent(["python3", "reproduce.py"], output)
+        _require(run.returncode == 1, "python-requirements independent exit was %s" % run.returncode)
+        _require(
+            "ORIGINAL_FAILURE" in run.stdout + run.stderr,
+            "python-requirements independent output lacked failure",
+        )
+
+
 def _check_cargo_workspace() -> None:
     if shutil.which("cargo") is None:
         raise _Skipped("cargo is not installed")
@@ -367,6 +430,7 @@ def _checks() -> list[tuple[str, Callable[[], None]]]:
         ("input-controls-budget", _check_input_controls_budget),
         ("semantic-stub", _check_semantic_stub),
         ("text-lines", _check_text_lines),
+        ("python-requirements", _check_python_requirements),
         (
             "python-pyproject",
             lambda: _check_manifest(

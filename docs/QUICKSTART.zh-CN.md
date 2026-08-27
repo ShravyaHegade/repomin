@@ -4,16 +4,27 @@ ReproMin 会在每次候选修改后重新执行失败命令，只保留仍能�
 
 ## 安装
 
-ReproMin 需要 Python 3.9 或更高版本，目前从 GitHub Release 安装，不依赖 PyPI：
+ReproMin 需要 Python 3.9 或更高版本，目前从 GitHub Release 安装，还没有发布到
+PyPI。建议先使用虚拟环境，避免修改系统 Python：
 
 ```sh
 python3 -m venv .venv
 . .venv/bin/activate
+python -m pip install --upgrade pip
+REPOMIN_VERSION=0.1.0.dev4
 python -m pip install \
-  https://github.com/fly1d/repomin/releases/download/v0.1.0.dev4/repomin-0.1.0.dev4-py3-none-any.whl
+  "https://github.com/fly1d/repomin/releases/download/v${REPOMIN_VERSION}/repomin-${REPOMIN_VERSION}-py3-none-any.whl"
+python -m repomin --version
 ```
 
-如果你正在开发 ReproMin，也可以在仓库根目录运行 `python3 -m pip install -e .`。
+当前版本应显示 `repomin 0.1.0.dev4`。发布页同时提供 wheel 和源码归档，以及对应的
+SHA-256 校验值；需要供应链校验时，请先核对
+[发布页](https://github.com/fly1d/repomin/releases/tag/v0.1.0.dev4)再安装。wheel 不需要
+本地构建，首次使用更快。
+
+如果你正在开发 ReproMin，也可以在仓库根目录创建虚拟环境后运行
+`python -m pip install -e ".[dev]"`，这样会同时安装测试、检查和发布工具；只需要
+包本身时，`python -m pip install -e .` 即可。
 
 ## 最小示例
 

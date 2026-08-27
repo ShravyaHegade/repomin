@@ -1,0 +1,6 @@
+# CI runtime entry point
+-r requirements/runtime.txt
+-c constraints.txt
+--index-url https://packages.example.invalid/simple
+--extra-index-url https://mirror.example.invalid/simple
+--trusted-host mirror.example.invalid

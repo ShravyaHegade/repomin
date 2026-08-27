@@ -1,0 +1,3 @@
+repomin-runtime<2
+repomin-ci-runner<5
+repomin-unused-runtime<10

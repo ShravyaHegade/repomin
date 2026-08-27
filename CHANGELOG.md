@@ -11,9 +11,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A real-failure pilot guide with a sanitization checklist, report validation
   workflow, and copyable feedback template.
+- A dependency-free contributor preflight script and one-command validation
+  guidance for local linting, compilation, tests, and optional benchmarks.
+- A network-free Python requirements-chain benchmark covering nested includes,
+  constraints, hash-pinned dependencies, and CI-only requirements.
 - Offline benchmark JSON summaries and comparison output now record the
   ReproMin version used for each run, making cross-version fixture comparisons
   auditable.
+- Packaging metadata now advertises the repository, documentation, issue,
+  discussion, and changelog links, and the optional `dev` extra installs the
+  tools used by the test and release checks.
+- Installation guidance now starts with an isolated environment, verifies both
+  CLI entry points, and links the release checksums and runnable examples.
+- Source distributions now retain the requirements-chain fixture and the
+  contributor preflight script used by the documented workflows.
+
+### Changed
+
+- Release instructions now use the runtime version as the packaging source of
+  truth, check all pinned documentation references, and verify wheel and source
+  distribution installs outside the checkout.
 
 ## [0.1.0.dev4] - 2026-08-27
 

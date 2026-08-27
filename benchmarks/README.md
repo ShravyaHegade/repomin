@@ -116,6 +116,15 @@ oracle keeps the project identity and one required PEP 621 dependency while
 allowing optional, build-system, Poetry, PDM, uv, and dependency-group entries
 to disappear. See `benchmarks/python-pyproject/README.md`.
 
+`python-requirements` is a network-free requirements-chain fixture modelled on
+CI dependency regressions. Its top-level `requirements.txt` includes a runtime
+file, that file includes CI-only requirements, and a sibling constraints file
+pins both packages. The oracle requires the complete include/constraint chain
+and a multiline hash-pinned runtime dependency while allowing unused packages
+and index options to disappear. See
+`benchmarks/python-requirements/README.md` for the reduction command and
+independent oracle check.
+
 `dotnet-project` is an MSBuild `.csproj` fixture. Its offline Python oracle
 requires selected package/project references and the target framework while
 allowing unrelated item entries to disappear. See

@@ -333,11 +333,11 @@ PYTHONPATH=src python3 -m coverage run --branch -m unittest discover -s tests
 python3 -m coverage report --show-missing
 ```
 
-Run the configured lint and byte-compile checks with:
+The preflight command above also runs linting and byte-compilation in temporary
+cache directories. To run only those static checks, use:
 
 ```sh
-ruff check src tests
-PYTHONPATH=src python3 -m compileall -q src tests
+python3 scripts/check_contribution.py --skip-tests
 ```
 
 Run the network-free benchmark regression with:
