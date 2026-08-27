@@ -10,11 +10,32 @@ assignees: ""
 
 What does this change do and why is it needed?
 
-## Checklist
+## Related context
 
-- [ ] Added or updated tests covering the change.
-- [ ] Ran `ruff check src tests`.
-- [ ] Ran `PYTHONPATH=src python3 -m compileall -q src tests`.
-- [ ] Ran `PYTHONPATH=src python3 -m unittest discover -s tests`.
+- Issue or discussion:
+- User workflow or failure being addressed:
+
+## Scope
+
+- [ ] Bug fix
+- [ ] User-facing feature or adapter
+- [ ] Documentation or example
+- [ ] Benchmark or fixture
+- [ ] Maintenance / tooling
+
+## Validation
+
+- [ ] Ran `python3 scripts/check_contribution.py`.
+- [ ] For a fixture or benchmark change, also ran
+      `python3 scripts/check_contribution.py --with-benchmarks`.
+- [ ] Added or updated focused tests covering the change (or explained why
+      they are not applicable).
 - [ ] Updated relevant documentation and the changelog.
-- [ ] For reducer changes, added or updated a benchmark if applicable.
+
+If a check was skipped because it does not apply or a local toolchain is
+unavailable, explain that here and include the checks that did run.
+
+## Safety and compatibility
+
+- [ ] No secrets, credentials, or private source are included.
+- [ ] Changes preserve the documented report/artifact and security boundaries.

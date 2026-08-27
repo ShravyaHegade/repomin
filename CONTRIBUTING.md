@@ -22,6 +22,29 @@ ReproMin is intentionally organized around small extension points:
 - execution backends for containers and remote workers;
 - public benchmark repositories with known reduction targets.
 
+## Contributor preflight
+
+From the repository root, run the standard local checks with one command:
+
+```sh
+python3 scripts/check_contribution.py
+```
+
+The preflight runs Ruff, byte-compilation, and the complete unit-test suite
+without changing tracked source files; its Python and Ruff caches are cleaned
+up from a temporary directory after each run. Install Ruff first when it is not
+already available (`python3 -m pip install ruff`). For a documentation-only change,
+`--skip-lint` is available; explain skipped checks in the pull request. When a
+change adds or updates an offline fixture, include the benchmark regression too:
+
+```sh
+python3 scripts/check_contribution.py --with-benchmarks
+```
+
+The benchmark command remains network-free and may skip fixtures whose optional
+toolchain is not installed. The individual commands below are still useful when
+diagnosing a failing check.
+
 ## Adding a benchmark
 
 Benchmarks are the most useful way to contribute a reproducible user workflow.
