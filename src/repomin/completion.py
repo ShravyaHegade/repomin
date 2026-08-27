@@ -33,8 +33,26 @@ _repomin() {
             return 0
         fi
     fi
+    if [[ "${COMP_WORDS[1]}" == "doctor" ]]; then
+        options="--version --help --command --match --exit-code --java-exception --python-exception --process-failure --adapter --source-reducer --backend --docker-image --docker-network --timeout --baseline-runs --output --ignore --ignore-path --env --json"
+        value_options="--command --match --exit-code --adapter --source-reducer --backend --docker-image --docker-network --timeout --baseline-runs --output --ignore --ignore-path --env"
+        case "$prev" in
+            --backend) COMPREPLY=( $(compgen -W "host docker" -- "$cur") ); return 0 ;;
+            --docker-network) COMPREPLY=( $(compgen -W "none bridge host" -- "$cur") ); return 0 ;;
+            --adapter) COMPREPLY=( $(compgen -W "auto none maven gradle python pipenv node composer dotnet ruby cargo go" -- "$cur") ); return 0 ;;
+            --source-reducer) COMPREPLY=( $(compgen -W "auto none java python" -- "$cur") ); return 0 ;;
+        esac
+        if [[ " $value_options " == *" $prev "* ]]; then
+            COMPREPLY=( $(compgen -f -- "$cur") )
+        elif [[ "$cur" == -* ]]; then
+            COMPREPLY=( $(compgen -W "$options" -- "$cur") )
+        else
+            COMPREPLY=( $(compgen -f -- "$cur") )
+        fi
+        return 0
+    fi
     if (( COMP_CWORD == 1 )); then
-        COMPREPLY=( $(compgen -W "completion report" -- "$cur") )
+        COMPREPLY=( $(compgen -W "completion doctor report" -- "$cur") )
         return 0
     fi
     options="--version --help --command --match --exit-code --output --session --resume --timeout --backend --docker-image --docker-network --docker-cpus --docker-memory --docker-pids-limit --docker-tmpfs-size --docker-workspace-limit --jobs --no-cache --max-attempts --max-duration --ignore --ignore-path --gitignore --gitignore-file --gitignore-recursive --keep --env --java-exception --python-exception --process-failure --baseline-runs --min-baseline-passes --candidate-runs --min-candidate-passes --min-baseline-rate --min-candidate-rate --confidence --run-confidence --holdout-runs --min-holdout-rate --holdout-confidence --adapter --source-reducer --text-file --semantic-reducer --semantic-endpoint --semantic-model --semantic-timeout --java-classpath --verbose"
@@ -76,8 +94,34 @@ _repomin() {
         fi
         return
     fi
+    if [[ "$words[2]" == "doctor" ]]; then
+        _arguments -s \
+            '1:repository:_files' \
+            '--version[show the installed version]' \
+            '--help[show Doctor help]' \
+            '--command[optional failure reproduction command]:command:' \
+            '--match[regular expression required in output]:pattern:' \
+            '--exit-code[exact process exit code]:code:' \
+            '--java-exception[preserve a normalized Java exception]' \
+            '--python-exception[preserve a normalized Python exception]' \
+            '--process-failure[preserve process termination]' \
+            '--adapter[structured manifest reducer]:adapter:(auto none maven gradle python pipenv node composer dotnet ruby cargo go)' \
+            '--source-reducer[source-level reducer]:reducer:(auto none java python)' \
+            '--backend[execution backend]:backend:(host docker)' \
+            '--docker-image[Docker image]:image:' \
+            '--docker-network[Docker network policy]:network:(none bridge host)' \
+            '--timeout[seconds per baseline run]:seconds:' \
+            '--baseline-runs[fresh baseline copies]:count:' \
+            '--output[output path to check]:path:_files' \
+            '--ignore[ignored basename]:name:' \
+            '--ignore-path[ignored repository path]:path:_files' \
+            '--env[baseline environment variable]:NAME=VALUE:' \
+            '--json[print a machine-readable result]'
+        return
+    fi
     options=(
         '1:repository:_files'
+        'doctor[check reducers, toolchains, and an optional baseline]'
         'report[inspect or validate a report]'
         'completion[print a shell completion script]'
         '--version[show the installed version]'
@@ -132,7 +176,7 @@ _repomin() {
         '--java-classpath[Java analysis classpath]:path:_files'
         '--verbose[print reduction progress]'
     )
-    _arguments -s $options '*:repository or completion command:_files'
+    _arguments -s $options '*:repository or command:_files'
 }
 
 _repomin "$@"
@@ -140,11 +184,12 @@ _repomin "$@"
 
 
 _FISH = r'''# Fish completion for repomin.
-complete -c repomin -f -n '__fish_use_subcommand' -a 'completion report' -d 'command'
+complete -c repomin -f -n '__fish_use_subcommand' -a 'completion doctor report' -d 'command'
 complete -c repomin -f -n '__fish_seen_subcommand_from completion' -a 'bash zsh fish' -d 'shell'
 complete -c repomin -f -n '__fish_seen_subcommand_from report' -a validate -d 'validate a report'
 complete -c repomin -f -n '__fish_seen_subcommand_from report; and __fish_seen_subcommand_from validate' -l payload -r -a '(__fish_complete_directories)' -d 'exported payload directory'
 complete -c repomin -f -n '__fish_seen_subcommand_from report; and __fish_seen_subcommand_from validate' -l json -d 'print a machine-readable result'
+complete -c repomin -f -n '__fish_seen_subcommand_from doctor' -l json -d 'print a machine-readable result'
 
 set -l boolean_options version help resume no-cache gitignore gitignore-recursive java-exception python-exception process-failure verbose
 for option in $boolean_options
@@ -200,8 +245,8 @@ Register-ArgumentCompleter -Native -CommandName repomin -ScriptBlock {
     param($wordToComplete, $commandAst, $cursorPosition)
 
     $options = @(
-        'report', 'completion',
-        '--version', '--help', '--command', '--match', '--exit-code', '--output',
+        'doctor', 'report', 'completion',
+        '--version', '--help', '--command', '--match', '--exit-code', '--output', '--json',
         '--session', '--resume', '--timeout', '--backend', '--docker-image',
         '--docker-network', '--docker-cpus', '--docker-memory',
         '--docker-pids-limit', '--docker-tmpfs-size', '--docker-workspace-limit',

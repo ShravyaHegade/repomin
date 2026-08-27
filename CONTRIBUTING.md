@@ -8,6 +8,10 @@ feature requests, and benchmark proposals use the repository issue templates.
 Support guidance is collected in [SUPPORT.md](SUPPORT.md), and all participation
 is governed by [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
+When diagnosing a new fixture, run `repomin doctor` first (see
+[docs/DOCTOR.md](docs/DOCTOR.md)) to confirm the command and selected adapter
+before adding reducer or benchmark changes.
+
 Maintainers preparing a GitHub Release should follow
 [docs/RELEASING.md](docs/RELEASING.md). It is intentionally separate from the
 contributor rules because release artifacts require version, checksum, and

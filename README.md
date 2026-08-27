@@ -45,6 +45,17 @@ For a copy-paste, network-free workflow, start with the
 [examples guide](docs/EXAMPLES.md). It creates a tiny failing project, reduces
 it, and explains where the payload and evidence report are written.
 
+Before a long reduction, run the read-only [doctor preflight](docs/DOCTOR.md)
+to detect supported reducers and verify that an optional failure command passes
+its baseline checks in fresh copies:
+
+```sh
+repomin doctor . \
+  --command 'python -m pytest -q' \
+  --match 'FAILED tests/test_regression.py' \
+  --output /tmp/project-repro
+```
+
 中文用户可以先阅读[中文快速开始](docs/QUICKSTART.zh-CN.md)，其中包含一个
 可直接运行的最小缩减示例、安全边界和报告说明。
 
@@ -1075,6 +1086,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for extension points and project rules,
   fields, accounting identities, holdout evidence, and consumer guidance.
 - [docs/LLM_REDUCTION.md](docs/LLM_REDUCTION.md) - optional semantic reducer
   seam and its provider-agnostic contract.
+- [docs/DOCTOR.md](docs/DOCTOR.md) - read-only toolchain and baseline preflight.
 - [docs/GITHUB_ACTION.md](docs/GITHUB_ACTION.md) - use ReproMin in CI to upload
   a minimized failure reproduction and its report.
 - [docs/ROADMAP.md](docs/ROADMAP.md) - current priorities, future directions,

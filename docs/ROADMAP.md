@@ -22,6 +22,8 @@ dates. Concrete contribution tasks live in
   caches, plus release metadata and isolated wheel/source-install checks.
 - A reusable GitHub Action with explicit output, exit-code, process-signature,
   holdout, and privacy-exclusion inputs, plus validated report summary outputs.
+- A read-only `repomin doctor` preflight for reducer/toolchain discovery, output
+  collision checks, and optional fresh-copy baseline verification.
 - A structured real-failure issue template and a short claim-to-PR workflow for
   contributors who can share sanitized CI or dependency failures.
 

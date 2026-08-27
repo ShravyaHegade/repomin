@@ -17,6 +17,7 @@ from repomin.cargo_manifest import CargoManifestReducer
 from repomin.composer_manifest import ComposerManifestReducer
 from repomin.completion import SUPPORTED_SHELLS, completion_script
 from repomin.dotnet_manifest import DotnetManifestReducer
+from repomin.doctor import format_doctor, run_doctor
 from repomin.go_manifest import GoManifestReducer
 from repomin.gradle import GradleReducer
 from repomin.gitignore import GitignoreError, GitignoreMatcher
@@ -367,7 +368,9 @@ def build_parser() -> argparse.ArgumentParser:
         prog="repomin",
         description="Reduce a repository while preserving a command failure.",
         epilog=(
-            "Generate shell completion with `repomin completion bash`, "
+            "Preflight with `repomin doctor --help`; inspect evidence with "
+            "`repomin report --help`. Generate shell completion with "
+            "`repomin completion bash`, "
             "`repomin completion zsh`, `repomin completion fish`, or "
             "`repomin completion powershell`."
         ),
@@ -726,6 +729,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     raw_argv = list(sys.argv[1:] if argv is None else argv)
+    if raw_argv and raw_argv[0] == "doctor":
+        return _doctor_command(raw_argv[1:])
     if raw_argv and raw_argv[0] == "report":
         return _report_command(raw_argv[1:])
     if raw_argv and raw_argv[0] == "completion":
@@ -1339,6 +1344,162 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ) as exc:
         print("repomin: %s" % exc, file=sys.stderr)
         return 2
+
+
+def _doctor_command(argv: Sequence[str]) -> int:
+    """Run read-only checks before starting a reduction."""
+    parser = argparse.ArgumentParser(
+        prog="repomin doctor",
+        description=(
+            "Check a repository, reducer/toolchain selection, and an optional "
+            "failure baseline without exporting mutations."
+        ),
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version="repomin %s" % __version__,
+    )
+    parser.add_argument("source", nargs="?", default=".", help="repository to inspect")
+    parser.add_argument(
+        "--command",
+        help="optional failure reproduction command to run in fresh copies",
+    )
+    parser.add_argument("--match", help="regular expression required in command output")
+    parser.add_argument(
+        "--exit-code",
+        type=int,
+        help="exact process exit code required by the failure oracle",
+    )
+    signature_group = parser.add_mutually_exclusive_group()
+    signature_group.add_argument(
+        "--java-exception",
+        action="store_true",
+        help="learn and preserve a normalized Java exception signature",
+    )
+    signature_group.add_argument(
+        "--python-exception",
+        action="store_true",
+        help="learn and preserve a normalized Python exception signature",
+    )
+    signature_group.add_argument(
+        "--process-failure",
+        action="store_true",
+        help="learn and preserve the exact process termination signature",
+    )
+    parser.add_argument(
+        "--adapter",
+        choices=(
+            "auto",
+            "none",
+            "maven",
+            "gradle",
+            "python",
+            "pipenv",
+            "node",
+            "composer",
+            "dotnet",
+            "ruby",
+            "cargo",
+            "go",
+        ),
+        default="auto",
+        help="structured manifest reducer to check",
+    )
+    parser.add_argument(
+        "--source-reducer",
+        choices=("auto", "none", "java", "python"),
+        default="auto",
+        help="source reducer to check",
+    )
+    parser.add_argument(
+        "--backend",
+        choices=("host", "docker"),
+        default="host",
+        help="backend used for the optional baseline (default: host)",
+    )
+    parser.add_argument("--docker-image", help="local Docker image for the baseline")
+    parser.add_argument(
+        "--docker-network",
+        choices=("none", "bridge", "host"),
+        default="none",
+        help="Docker network policy (default: none)",
+    )
+    parser.add_argument("--timeout", type=float, default=120.0, help="seconds per baseline run")
+    parser.add_argument(
+        "--baseline-runs",
+        type=int,
+        default=2,
+        help="fresh baseline copies when --command is supplied (default: 2)",
+    )
+    parser.add_argument(
+        "--output",
+        help="output path to check (default: SOURCE-minimal); never created",
+    )
+    parser.add_argument(
+        "--ignore",
+        dest="ignore_names",
+        action="append",
+        type=_parse_ignore_name,
+        default=[],
+        metavar="NAME",
+        help="exact basename excluded from baseline copies; repeatable",
+    )
+    parser.add_argument(
+        "--ignore-path",
+        dest="ignore_paths",
+        action="append",
+        type=_parse_ignore_path,
+        default=[],
+        metavar="RELATIVE_PATH",
+        help="exact repository path excluded from baseline copies; repeatable",
+    )
+    parser.add_argument(
+        "--env",
+        dest="environment_entries",
+        action="append",
+        type=_parse_environment,
+        default=[],
+        metavar="NAME=VALUE",
+        help="explicit baseline environment override; repeatable",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print a machine-readable diagnostic result",
+    )
+    try:
+        args = parser.parse_args(list(argv))
+        environment = _environment_mapping(args.environment_entries)
+        source = Path(args.source).expanduser().resolve()
+        ok, result = run_doctor(
+            source,
+            command=args.command,
+            match=args.match,
+            exit_code=args.exit_code,
+            java_exception=args.java_exception,
+            python_exception=args.python_exception,
+            process_failure=args.process_failure,
+            adapter=args.adapter,
+            source_reducer=args.source_reducer,
+            backend=args.backend,
+            docker_image=args.docker_image,
+            docker_network=args.docker_network,
+            timeout=args.timeout,
+            baseline_runs=args.baseline_runs,
+            environment=environment,
+            output=args.output,
+            ignore_names=args.ignore_names,
+            ignore_paths=args.ignore_paths,
+        )
+    except (OSError, RunnerError, ValueError) as exc:
+        print("repomin doctor: %s" % exc, file=sys.stderr)
+        return 2
+    if args.json:
+        print(json.dumps(result, sort_keys=True))
+    else:
+        print(format_doctor(result), end="")
+    return 0 if ok else 1
 
 
 def _report_command(argv: Sequence[str]) -> int:

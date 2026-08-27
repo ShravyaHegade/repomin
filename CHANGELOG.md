@@ -35,6 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `repomin report validate --json` now returns a compact validated summary of
   version, backend, source/payload size, reduction attempts, mutations, cache
   uses, and holdout status for CI and issue reports.
+- A read-only `repomin doctor` preflight now detects supported reducers and
+  toolchains and can verify a failure baseline in fresh copies before a costly
+  reduction.
 - The GitHub Action now uses the runner temporary directory when `output` is
   omitted, so the default `source: .` workflow does not place reducer output
   inside the repository. It also exposes metadata-path and source/output byte

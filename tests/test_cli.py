@@ -260,6 +260,7 @@ class CliTest(unittest.TestCase):
                 self.assertEqual(0, exit_code)
                 self.assertIn(marker, stdout.getvalue())
                 self.assertIn("pipenv", stdout.getvalue())
+                self.assertIn("doctor", stdout.getvalue())
                 self.assertIn("report", stdout.getvalue())
                 self.assertIn("validate", stdout.getvalue())
                 for option in sorted(parser_options):
