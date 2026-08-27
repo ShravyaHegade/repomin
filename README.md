@@ -50,7 +50,7 @@ The current pre-alpha release is distributed from GitHub, not PyPI yet:
 
 ```sh
 python3 -m pip install \
-  https://github.com/fly1d/repomin/releases/download/v0.1.0.dev3/repomin-0.1.0.dev3-py3-none-any.whl
+  https://github.com/fly1d/repomin/releases/download/v0.1.0.dev4/repomin-0.1.0.dev4-py3-none-any.whl
 ```
 
 For development, clone the repository and install it in editable mode:

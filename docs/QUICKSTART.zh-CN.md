@@ -10,7 +10,7 @@ ReproMin 需要 Python 3.9 或更高版本，目前从 GitHub Release 安装，�
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install \
-  https://github.com/fly1d/repomin/releases/download/v0.1.0.dev3/repomin-0.1.0.dev3-py3-none-any.whl
+  https://github.com/fly1d/repomin/releases/download/v0.1.0.dev4/repomin-0.1.0.dev4-py3-none-any.whl
 ```
 
 如果你正在开发 ReproMin，也可以在仓库根目录运行 `python3 -m pip install -e .`。

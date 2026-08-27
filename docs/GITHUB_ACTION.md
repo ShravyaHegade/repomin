@@ -12,7 +12,7 @@ job's failure-handling step:
 ```yaml
 - name: Minimize failure
   if: ${{ failure() }}
-  uses: fly1d/repomin@v0.1.0.dev3
+  uses: fly1d/repomin@v0.1.0.dev4
   with:
     command: python -m pytest -q
     match: "FAILED tests/test_regression.py"
@@ -39,7 +39,7 @@ existing local image:
 ```yaml
 - name: Minimize Docker failure
   if: ${{ failure() }}
-  uses: fly1d/repomin@v0.1.0.dev3
+  uses: fly1d/repomin@v0.1.0.dev4
   with:
     command: python3 reproduce.py
     match: "ORIGINAL_FAILURE"
@@ -58,7 +58,7 @@ the artifact name:
 - name: Minimize failure
   if: ${{ failure() }}
   id: minimize
-  uses: fly1d/repomin@v0.1.0.dev3
+  uses: fly1d/repomin@v0.1.0.dev4
   with:
     command: python -m pytest -q
     match: "FAILED tests/test_regression.py"
