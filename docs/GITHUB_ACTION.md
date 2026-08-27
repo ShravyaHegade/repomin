@@ -62,6 +62,12 @@ holdout samples separate from ordinary candidate evidence and reports the
 result through `holdout-status`:
 
 ```yaml
+- name: Certify minimized failure
+  if: ${{ failure() }}
+  uses: fly1d/repomin@v0.1.0.dev4
+  with:
+    command: python -m pytest -q
+    match: "FAILED tests/test_regression.py"
     holdout-runs: "5"
     min-holdout-rate: "0.8"
     holdout-confidence: "0.95"

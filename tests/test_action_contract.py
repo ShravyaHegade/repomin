@@ -73,6 +73,10 @@ class ActionContractTests(unittest.TestCase):
     def test_smoke_workflow_exercises_exit_code_and_outputs(self) -> None:
         self.assertIn('exit-code: "7"', self.workflow)
         self.assertNotIn("          match: INPUT_CONTROLS_FAILURE", self.workflow)
+        self.assertIn("          ignore: |", self.workflow)
+        self.assertIn("          ignore-path: nested/deep-noise.txt", self.workflow)
+        self.assertIn("          gitignore: true", self.workflow)
+        self.assertIn("          gitignore-recursive: true", self.workflow)
         for name in ("ACTUAL_SCHEMA", "ACTUAL_SOURCE_FILES", "ACTUAL_OUTPUT_FILES", "ACTUAL_HOLDOUT"):
             self.assertIn(name, self.workflow)
         self.assertIn('ACTUAL_HOLDOUT" == "not_requested"', self.workflow)

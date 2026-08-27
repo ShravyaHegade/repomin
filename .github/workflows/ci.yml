@@ -93,6 +93,12 @@ jobs:
           exit-code: "7"
           adapter: none
           source-reducer: none
+          ignore: |
+            removable-a.txt
+            removable-b.txt
+          ignore-path: nested/deep-noise.txt
+          gitignore: true
+          gitignore-recursive: true
           output: .repomin-action-smoke
           artifact-name: action-smoke
       - name: Check action outputs

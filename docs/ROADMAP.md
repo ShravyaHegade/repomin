@@ -20,6 +20,10 @@ dates. Concrete contribution tasks live in
   hash-pinned CI dependencies, with an independent oracle check.
 - A dependency-free contributor preflight that isolates lint and bytecode
   caches, plus release metadata and isolated wheel/source-install checks.
+- A reusable GitHub Action with explicit output, exit-code, process-signature,
+  holdout, and privacy-exclusion inputs, plus validated report summary outputs.
+- A structured real-failure issue template and a short claim-to-PR workflow for
+  contributors who can share sanitized CI or dependency failures.
 
 ## Current: contributor feedback
 
