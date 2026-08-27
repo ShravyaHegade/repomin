@@ -231,3 +231,15 @@ documentation.
 ## [0.1.0.dev0] - Unreleased
 
 Initial pre-alpha feasibility build.
+
+
+---
+
+### 3) Update `CHANGELOG.md`
+
+In `## [Unreleased]` → `### Added`, add this bullet:
+
+```md
+- Added a network-free Gradle reduction example to the runnable examples docs,
+  showing the failure oracle, minimized payload, and report validation flow for
+  a local Java/Gradle fixture.

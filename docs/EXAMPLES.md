@@ -329,3 +329,24 @@ semantic mutation. This fixture does not contact a model or external network.
 For a real local or self-hosted endpoint, see
 [LLM_REDUCTION.md](LLM_REDUCTION.md) and keep the feature disabled unless the
 endpoint and token handling are understood.
+
+## Shrink a Gradle multi-module build without network access
+
+The repository includes a local-only Gradle fixture that fails with a missing
+method call and does not contact a network resource. It requires a local JDK
+and a local Gradle installation; Docker is optional but not required. The
+default host backend executes the supplied command directly on the machine, so
+only run trusted projects on the host. Docker reduces exposure but is not a
+complete security boundary, and the generated reports should still be reviewed
+before running untrusted code.
+
+From a clean checkout, run the built-in Gradle fixture:
+
+```sh
+out_parent="$(mktemp -d /tmp/repomin-gradle.XXXXXX)"
+PYTHONPATH=src python3 -m repomin benchmarks/gradle-multimodule \
+  --command 'gradle -q :app:reproduceFailure' \
+  --match 'NoSuchMethodError: demo.Target.missing()' \
+  --adapter gradle \
+  --source-reducer none \
+  --output "$out_parent/result"
