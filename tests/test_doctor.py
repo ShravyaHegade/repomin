@@ -8,6 +8,7 @@ import json
 import math
 import os
 import shlex
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -27,6 +28,14 @@ if not Path("required.txt").exists():
 print("ORIGINAL_FAILURE", file=sys.stderr)
 raise SystemExit(7)
 """
+
+
+def _python_command(script: str) -> str:
+    """Build a shell command for the platform-specific command runner."""
+    argv = [sys.executable, script]
+    if os.name == "nt":
+        return subprocess.list2cmdline(argv)
+    return shlex.join(argv)
 
 
 class DoctorTest(unittest.TestCase):
@@ -55,7 +64,7 @@ class DoctorTest(unittest.TestCase):
 
     def test_doctor_runs_baseline_in_fresh_copies(self) -> None:
         source = self._source()
-        command = "%s reproduce.py" % shlex.quote(sys.executable)
+        command = _python_command("reproduce.py")
         ok, result = run_doctor(
             source,
             command=command,
@@ -123,7 +132,7 @@ raise SystemExit(7)
 """,
             encoding="utf-8",
         )
-        command = "%s reproduce.py" % shlex.quote(sys.executable)
+        command = _python_command("reproduce.py")
         ok, result = run_doctor(
             source,
             command=command,
@@ -231,7 +240,7 @@ raise SystemExit(7)
     def test_cli_returns_one_when_baseline_does_not_reproduce(self) -> None:
         source = self._source()
         stdout = io.StringIO()
-        command = "%s reproduce.py" % shlex.quote(sys.executable)
+        command = _python_command("reproduce.py")
         with contextlib.redirect_stdout(stdout):
             exit_code = main(
                 [
