@@ -7,6 +7,7 @@ from repomin.cli import main
 from repomin.model import ReductionResult, ReductionStats, RunResult
 from repomin.report import (
     ReportValidationError,
+    _build_report,
     _reproduction_markdown,
     validate_report_document,
     validate_report_file,
@@ -58,6 +59,28 @@ def _report() -> dict:
 
 
 class ReportValidationTest(unittest.TestCase):
+    def test_generated_report_records_repomin_version(self) -> None:
+        result = ReductionResult(
+            output=Path("reduced"),
+            stats=ReductionStats(source_files=1, source_bytes=1),
+            baseline=RunResult(1, "", "", 0.0),
+            final_run=RunResult(1, "", "", 0.0),
+        )
+        report = _build_report(result, "python3 reproduce.py", "FAIL")
+        self.assertEqual("0.1.0.dev4", report["repomin_version"])
+        self.assertIs(validate_report_document(report), report)
+
+    def test_legacy_report_without_version_remains_valid(self) -> None:
+        report = _report()
+        self.assertNotIn("repomin_version", report)
+        self.assertIs(validate_report_document(report), report)
+
+    def test_rejects_malformed_version_provenance(self) -> None:
+        report = _report()
+        report["repomin_version"] = ""
+        with self.assertRaisesRegex(ReportValidationError, "repomin_version"):
+            validate_report_document(report)
+
     def test_rejects_malformed_events(self) -> None:
         report = _report()
         report.pop("events")

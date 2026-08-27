@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
+from repomin import __version__
 from repomin.model import ReductionResult, TREE_FINGERPRINT_POLICY
 from repomin.session import _tree_digest
 from repomin.signature import process_failure_name
@@ -27,6 +28,8 @@ def validate_report_document(report: object) -> Dict[str, object]:
         raise ReportValidationError(
             "unsupported report schema_version: %r" % report.get("schema_version")
         )
+    if "repomin_version" in report:
+        _require_text(report, "repomin_version", non_empty=True)
     _require_text(report, "command", non_empty=True)
     _require_optional_text(report, "failure_match")
     _require_int(report, "baseline_exit_code")
@@ -556,6 +559,9 @@ def verify_existing_report(
         raise ValueError("metadata output could not be verified: %s" % metadata) from exc
 
     expected_report = _build_report(result, command, match)
+    # Reports produced before version provenance was added remain resumable.
+    if isinstance(actual_report, dict) and "repomin_version" not in actual_report:
+        expected_report.pop("repomin_version", None)
     # A report may have been fully written immediately before the process
     # crashed. Restoration itself changes only these provenance booleans.
     for report in (actual_report, expected_report):
@@ -586,6 +592,7 @@ def _build_report(
     holdout = result.holdout_certification
     report: Dict[str, object] = {
         "schema_version": 1,
+        "repomin_version": __version__,
         "command": command,
         "failure_match": match,
         "baseline_exit_code": result.baseline.returncode,

@@ -14,6 +14,7 @@ version, and never infer code correctness from a passing oracle.
 | Field | Meaning |
 | --- | --- |
 | `schema_version` | Integer report format version. Current value: `1`. |
+| `repomin_version` | ReproMin version that generated the report. Optional in legacy reports. |
 | `command` | Exact reproduction command passed to the runner. |
 | `failure_match` | Configured output regular expression, or `null` for process/exit-code modes. |
 | `baseline_exit_code` | Return code observed during baseline validation. |
