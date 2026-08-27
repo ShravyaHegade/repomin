@@ -13,7 +13,9 @@ Before opening an issue:
   and [report schema](docs/REPORT_SCHEMA.md).
 - Search existing issues for the command, adapter, or error message.
 - For a sanitized real CI workflow, follow the [real failure pilot
-  guide](docs/REAL_FAILURE_PILOT.md) and share the summary in issue #11.
+  guide](docs/REAL_FAILURE_PILOT.md), then use the [real CI or dependency
+  failure template](https://github.com/fly1d/repomin/issues/new?template=real_failure.md)
+  or share the summary in issue #11.
 - Include the operating system, Python and ReproMin versions, backend, exact
   command, and a redacted report or output when available.
 
