@@ -103,7 +103,9 @@ class ReportValidationTest(unittest.TestCase):
             output.mkdir()
             metadata.mkdir()
             entry = output / "case.txt"
-            entry.write_text("failure\n", encoding="utf-8")
+            # Keep the fixture byte-stable on Windows, where text-mode writes
+            # translate ``\n`` to ``\r\n``.
+            entry.write_bytes(b"failure\n")
             result = ReductionResult(
                 output=output,
                 stats=ReductionStats(
@@ -253,6 +255,14 @@ class ReportValidationTest(unittest.TestCase):
         report.pop("events")
         with self.assertRaisesRegex(ReportValidationError, "events must be an array"):
             validate_report_document(report)
+
+    def test_rejects_unhashable_phase_coverage_without_traceback(self) -> None:
+        for coverage in ([], {}):
+            report = _report()
+            report["phase_statistics"]["coverage"] = coverage
+            with self.subTest(coverage=coverage):
+                with self.assertRaisesRegex(ReportValidationError, "coverage"):
+                    validate_report_document(report)
         report = _report()
         report["events"] = [{"phase": "files"}]
         with self.assertRaisesRegex(ReportValidationError, "description"):

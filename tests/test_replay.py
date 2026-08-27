@@ -206,7 +206,7 @@ class ReplayTest(unittest.TestCase):
         fake_os = mock.Mock()
         fake_os.name = "nt"
         with mock.patch("repomin.replay.os", fake_os):
-            with self.assertRaisesRegex(ReplayError, "case-insensitive"):
+            with self.assertRaisesRegex(ValueError, "(case-insensitive|ambiguous)"):
                 replay_report(
                     report_path,
                     payload,

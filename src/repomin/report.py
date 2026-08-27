@@ -109,7 +109,7 @@ def validate_report_document(report: object) -> Dict[str, object]:
     phases = _require_object(report, "phase_statistics")
     _validate_optional_schema_version(phases, "phase_statistics")
     coverage = phases.get("coverage")
-    if coverage not in {"complete", "partial"}:
+    if not isinstance(coverage, str) or coverage not in {"complete", "partial"}:
         raise ReportValidationError(
             "phase_statistics.coverage must be complete or partial"
         )
