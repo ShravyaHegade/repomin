@@ -6,11 +6,14 @@ branding:
   icon: minimize-2
 outputs:
   payload-path:
-    description: Absolute workspace path to the minimized payload directory
+    description: Absolute path to the minimized payload directory
     value: ${{ steps.reduce.outputs.payload-path }}
   report-path:
-    description: Absolute workspace path to the generated report.json
+    description: Absolute path to the generated report.json
     value: ${{ steps.reduce.outputs.report-path }}
+  metadata-path:
+    description: Absolute path to the generated .repomin metadata directory
+    value: ${{ steps.reduce.outputs.metadata-path }}
   artifact-name:
     description: Name of the uploaded GitHub Actions artifact
     value: ${{ inputs.artifact-name }}
@@ -20,9 +23,15 @@ outputs:
   source-files:
     description: Number of files in the source tree before reduction
     value: ${{ steps.reduce.outputs.source-files }}
+  source-bytes:
+    description: Number of source bytes before reduction
+    value: ${{ steps.reduce.outputs.source-bytes }}
   output-files:
     description: Number of files in the minimized payload
     value: ${{ steps.reduce.outputs.output-files }}
+  output-bytes:
+    description: Number of bytes in the minimized payload
+    value: ${{ steps.reduce.outputs.output-bytes }}
   attempts:
     description: Logical candidate attempts performed by the reducer
     value: ${{ steps.reduce.outputs.attempts }}
@@ -81,9 +90,9 @@ inputs:
     required: false
     default: .
   output:
-    description: Repository-relative output directory for the minimized payload
+    description: Repository-relative output directory; empty uses runner temp
     required: false
-    default: .repomin-result
+    default: ""
   adapter:
     description: Structured manifest adapter (auto, none, maven, gradle, python, pipenv, node, composer, dotnet, ruby, cargo, or go)
     required: false
@@ -164,12 +173,21 @@ runs:
             exit 2
             ;;
         esac
-        case "$REPOMIN_OUTPUT" in
-          /*|../*|*/../*|..)
-            echo "output must be repository-relative and must not escape the workspace" >&2
+        if [[ -n "$REPOMIN_OUTPUT" ]]; then
+          case "$REPOMIN_OUTPUT" in
+            /*|../*|*/../*|..)
+              echo "output must be repository-relative and must not escape the workspace" >&2
+              exit 2
+              ;;
+          esac
+          output_path="$GITHUB_WORKSPACE/$REPOMIN_OUTPUT"
+        else
+          if [[ -z "${RUNNER_TEMP:-}" ]]; then
+            echo "RUNNER_TEMP is required when output is omitted" >&2
             exit 2
-            ;;
-        esac
+          fi
+          output_path="$RUNNER_TEMP/repomin-result-${GITHUB_RUN_ID:-0}-${GITHUB_RUN_ATTEMPT:-0}-$$"
+        fi
         if [[ "$REPOMIN_BACKEND" == docker && -z "$REPOMIN_DOCKER_IMAGE" ]]; then
           echo "docker-image is required when backend is docker" >&2
           exit 2
@@ -207,7 +225,7 @@ runs:
         args=(
           "$GITHUB_WORKSPACE/$REPOMIN_SOURCE"
           --command "$REPOMIN_COMMAND"
-          --output "$GITHUB_WORKSPACE/$REPOMIN_OUTPUT"
+          --output "$output_path"
           --adapter "$REPOMIN_ADAPTER"
           --source-reducer "$REPOMIN_SOURCE_REDUCER"
           --backend "$REPOMIN_BACKEND"
@@ -255,7 +273,7 @@ runs:
           args+=(--docker-image "$REPOMIN_DOCKER_IMAGE")
         fi
         repomin "${args[@]}"
-        payload_path="$GITHUB_WORKSPACE/$REPOMIN_OUTPUT"
+        payload_path="$output_path"
         report_path="$payload_path.repomin/report.json"
         if [[ ! -d "$payload_path" || ! -f "$report_path" ]]; then
           echo "ReproMin did not produce the expected payload and report paths" >&2
@@ -265,6 +283,7 @@ runs:
         {
           printf 'payload-path=%s\n' "$payload_path"
           printf 'report-path=%s\n' "$report_path"
+          printf 'metadata-path=%s\n' "$payload_path.repomin"
           python - "$report_path" <<'PY'
         import json
         import sys
@@ -275,7 +294,9 @@ runs:
         required = {
             "report-schema-version": report.get("schema_version"),
             "source-files": report.get("source", {}).get("files"),
+            "source-bytes": report.get("source", {}).get("bytes"),
             "output-files": report.get("output", {}).get("files"),
+            "output-bytes": report.get("output", {}).get("bytes"),
             "attempts": report.get("attempts"),
             "accepted-mutations": report.get("accepted_mutations"),
             "holdout-status": report.get("holdout_certification", {}).get("status"),
@@ -293,7 +314,7 @@ runs:
       with:
         name: ${{ inputs.artifact-name }}
         path: |
-          ${{ github.workspace }}/${{ inputs.output }}
-          ${{ github.workspace }}/${{ inputs.output }}.repomin
+          ${{ steps.reduce.outputs.payload-path }}
+          ${{ steps.reduce.outputs.metadata-path }}
         if-no-files-found: error
         include-hidden-files: true

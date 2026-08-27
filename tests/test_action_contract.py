@@ -28,9 +28,12 @@ class ActionContractTests(unittest.TestCase):
 
     def test_report_outputs_are_declared_and_emitted(self) -> None:
         for name in (
+            "metadata-path",
             "report-schema-version",
             "source-files",
+            "source-bytes",
             "output-files",
+            "output-bytes",
             "attempts",
             "accepted-mutations",
             "holdout-status",
@@ -42,6 +45,11 @@ class ActionContractTests(unittest.TestCase):
             self.action,
         )
         self.assertIn("generated report is missing an action output field", self.action)
+        self.assertIn('default: ""', self.action)
+        self.assertIn('output_path="$RUNNER_TEMP/repomin-result-', self.action)
+        self.assertIn('if [[ -z "${RUNNER_TEMP:-}" ]]; then', self.action)
+        self.assertIn("printf 'metadata-path=%s\\n'", self.action)
+        self.assertIn("steps.reduce.outputs.metadata-path", self.action)
 
     def test_holdout_inputs_are_forwarded(self) -> None:
         for name in ("holdout-runs", "min-holdout-rate", "holdout-confidence"):
