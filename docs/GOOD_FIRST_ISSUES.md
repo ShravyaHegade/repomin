@@ -15,7 +15,28 @@ These issues are intentionally small and have explicit acceptance criteria:
 The [real CI failure pilot](https://github.com/fly1d/repomin/issues/11) is also
 open for users who have a sanitized workflow to share. Check the repository's
 [open issues](https://github.com/fly1d/repomin/issues) for newly proposed work,
-or use the template below to suggest a focused contribution.
+or use the [issue template chooser](https://github.com/fly1d/repomin/issues/new/choose)
+to suggest a focused contribution.
+
+## Claim and submit
+
+Use this short loop for a starter issue:
+
+1. Check that the issue is still open and does not already have an assignee,
+   then comment with the part you plan to change. Wait for the maintainer to
+   confirm the scope before doing substantial work.
+2. Keep the change on a focused branch and follow the issue's acceptance
+   criteria. For documentation or fixture work, run the exact command shown in
+   the issue and capture the result (including the expected payload and report
+   validation when applicable).
+3. Before opening a pull request, run
+   `python3 scripts/check_contribution.py`; add `--with-benchmarks` for fixture
+   changes. Open the PR against `main`, include `Closes #<issue-number>`, and
+   paste the checks and observed output into the PR template.
+4. Leave the issue linked until review and CI are complete. If the task is no
+   longer available, choose another issue from the [open issue
+   list](https://github.com/fly1d/repomin/issues) instead of starting parallel
+   work.
 
 Completed tasks are removed from this page so contributors do not begin stale
 work.
