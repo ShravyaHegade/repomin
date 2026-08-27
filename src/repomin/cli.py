@@ -1368,10 +1368,22 @@ def _report_command(argv: Sequence[str]) -> int:
     except (ReportValidationError, ValueError, OSError) as exc:
         print("repomin report: %s" % exc, file=sys.stderr)
         return 2
+    source = report["source"]
+    output = report["output"]
+    execution = report["execution"]
     result = {
         "valid": True,
         "schema_version": report["schema_version"],
+        "repomin_version": report.get("repomin_version"),
         "holdout_status": report["holdout_certification"]["status"],
+        "backend": execution["backend"],
+        "source_files": source["files"],
+        "source_bytes": source["bytes"],
+        "output_files": output["files"],
+        "output_bytes": output["bytes"],
+        "attempts": report["attempts"],
+        "accepted_mutations": report["accepted_mutations"],
+        "cache_hits": report["cache_hits"],
         "report": str(args.report.resolve()),
     }
     if args.payload is not None:

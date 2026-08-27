@@ -139,6 +139,14 @@ repomin report validate OUTPUT.repomin/report.json --payload OUTPUT
 It returns exit code `2` for malformed JSON, unsupported schema versions,
 inconsistent phase/holdout accounting, or a payload fingerprint mismatch.
 
+Add `--json` when a CI step or issue report needs a compact summary. In
+addition to `valid`, `schema_version`, `holdout_status`, and the report path,
+the JSON result includes `repomin_version`, `backend`, source/output file and
+byte counts, `attempts`, `accepted_mutations`, and `cache_hits`. The version is
+`null` for legacy reports that predate version provenance. These fields are
+descriptive metadata copied from the validated report; they do not add a new
+correctness claim.
+
 The architecture document explains the statistical contracts and reducer
 invariants behind these fields. See [ARCHITECTURE.md](ARCHITECTURE.md) and
 [SECURITY.md](../SECURITY.md) before processing untrusted repositories.

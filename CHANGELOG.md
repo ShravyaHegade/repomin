@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The GitHub Action can now forward newline-separated exact ignore rules and
   repository `.gitignore` settings, making artifact privacy controls usable in
   the CI integration itself.
+- `repomin report validate --json` now returns a compact validated summary of
+  version, backend, source/payload size, reduction attempts, mutations, cache
+  uses, and holdout status for CI and issue reports.
 
 ### Changed
 

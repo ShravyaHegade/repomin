@@ -336,7 +336,17 @@ class ReportValidationTest(unittest.TestCase):
             with redirect_stdout(output):
                 exit_code = main(["report", "validate", str(report_path), "--json"])
             self.assertEqual(0, exit_code)
-            self.assertTrue(json.loads(output.getvalue())["valid"])
+            result = json.loads(output.getvalue())
+            self.assertTrue(result["valid"])
+            self.assertIsNone(result["repomin_version"])
+            self.assertEqual("host", result["backend"])
+            self.assertEqual(2, result["source_files"])
+            self.assertEqual(10, result["source_bytes"])
+            self.assertEqual(1, result["output_files"])
+            self.assertEqual(5, result["output_bytes"])
+            self.assertEqual(1, result["attempts"])
+            self.assertEqual(1, result["accepted_mutations"])
+            self.assertEqual(0, result["cache_hits"])
 
 
 if __name__ == "__main__":

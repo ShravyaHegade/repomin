@@ -47,6 +47,12 @@ repomin report validate \
   --json
 ```
 
+The `--json` result includes the validated ReproMin version, execution backend,
+source and payload sizes, attempt/mutation counts, cache uses, and holdout
+status. You can paste those scalar fields into the issue template instead of
+manually opening the full report; still review the complete `report.json` and
+payload for secrets before sharing.
+
 The sidecar contains `report.json` and a human-readable `REPOMIN.md`. Review
 both files and the minimized payload for secrets before posting anything.
 
