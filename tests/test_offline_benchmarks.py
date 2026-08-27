@@ -68,6 +68,7 @@ class OfflineBenchmarkSummaryTest(unittest.TestCase):
         self.assertEqual(checks, data["checks"])
         self.assertIn("python", data)
         self.assertIn("platform", data)
+        self.assertEqual(_RUNNER.__version__, data["repomin_version"])
         self.assertEqual(
             {"only": [], "exclude": [], "selected": ["required", "optional-tool"]},
             data["selection"],

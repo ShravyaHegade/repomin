@@ -29,10 +29,11 @@ output path:
 python3 benchmarks/run_offline.py --json-output /tmp/repomin-benchmarks.json
 ```
 
-The JSON uses schema version `1` and records the Python/platform identity,
-aggregate pass/skip/fail counts, one status plus elapsed time per fixture, and
-the exact `only`/`exclude` filters plus final `selected` names. This makes a
-filtered artifact distinguishable from a full run when using `compare.py`.
+The JSON uses schema version `1` and records the ReproMin and Python/platform
+identity, aggregate pass/skip/fail counts, one status plus elapsed time per
+fixture, and the exact `only`/`exclude` filters plus final `selected` names.
+This makes a filtered artifact distinguishable from a full run when using
+`compare.py`, and makes cross-version comparisons auditable.
 Failures include only a bounded error summary; the full reproduction output
 remains in the command logs.
 

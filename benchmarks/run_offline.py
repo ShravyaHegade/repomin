@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
+from repomin import __version__  # noqa: E402
 from repomin.report import validate_report_file  # noqa: E402
 
 
@@ -312,6 +313,7 @@ def _write_summary(
     }
     summary = {
         "schema_version": 1,
+        "repomin_version": __version__,
         "python": "%d.%d.%d" % sys.version_info[:3],
         "platform": sys.platform,
         **counts,
