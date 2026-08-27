@@ -1,0 +1,85 @@
+"""Static checks for the public GitHub Action metadata contract."""
+
+from pathlib import Path
+import unittest
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class ActionContractTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.action = (ROOT / "action.yml").read_text(encoding="utf-8")
+        cls.workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(
+            encoding="utf-8"
+        )
+        cls.docs = (ROOT / "docs" / "GITHUB_ACTION.md").read_text(encoding="utf-8")
+
+    def test_failure_oracle_inputs_are_optional_and_forwarded(self) -> None:
+        self.assertIn("  match:\n", self.action)
+        self.assertIn("    required: false\n    default: \"\"", self.action)
+        for name in ("exit-code", "process-failure"):
+            self.assertIn("  %s:\n" % name, self.action)
+            self.assertIn("REPOMIN_%s" % name.upper().replace("-", "_"), self.action)
+        self.assertIn("args+=(--match \"$REPOMIN_MATCH\")", self.action)
+        self.assertIn("args+=(--exit-code \"$REPOMIN_EXIT_CODE\")", self.action)
+        self.assertIn("args+=(--process-failure)", self.action)
+
+    def test_report_outputs_are_declared_and_emitted(self) -> None:
+        for name in (
+            "report-schema-version",
+            "source-files",
+            "output-files",
+            "attempts",
+            "accepted-mutations",
+            "holdout-status",
+        ):
+            self.assertIn("  %s:\n" % name, self.action)
+        self.assertIn('print(f"{name}={value}")', self.action)
+        self.assertIn(
+            'repomin report validate "$report_path" --payload "$payload_path" --json',
+            self.action,
+        )
+        self.assertIn("generated report is missing an action output field", self.action)
+
+    def test_holdout_inputs_are_forwarded(self) -> None:
+        for name in ("holdout-runs", "min-holdout-rate", "holdout-confidence"):
+            self.assertIn("  %s:\n" % name, self.action)
+            variable = "REPOMIN_%s" % name.upper().replace("-", "_")
+            self.assertIn(variable, self.action)
+        self.assertIn('args+=(--holdout-runs "$REPOMIN_HOLDOUT_RUNS")', self.action)
+        self.assertIn(
+            'args+=(--min-holdout-rate "$REPOMIN_MIN_HOLDOUT_RATE")', self.action
+        )
+        self.assertIn(
+            'args+=(--holdout-confidence "$REPOMIN_HOLDOUT_CONFIDENCE")', self.action
+        )
+
+    def test_smoke_workflow_exercises_exit_code_and_outputs(self) -> None:
+        self.assertIn('exit-code: "7"', self.workflow)
+        self.assertNotIn("          match: INPUT_CONTROLS_FAILURE", self.workflow)
+        for name in ("ACTUAL_SCHEMA", "ACTUAL_SOURCE_FILES", "ACTUAL_OUTPUT_FILES", "ACTUAL_HOLDOUT"):
+            self.assertIn(name, self.workflow)
+        self.assertIn('ACTUAL_HOLDOUT" == "not_requested"', self.workflow)
+
+    def test_docs_describe_unstable_output_mode(self) -> None:
+        self.assertIn("exit-code", self.docs)
+        self.assertIn("process-failure", self.docs)
+        self.assertIn("unstable output", self.docs)
+        self.assertIn("holdout-status", self.docs)
+        self.assertIn("min-holdout-rate", self.docs)
+
+    def test_embedded_output_reader_is_indented_inside_yaml_block(self) -> None:
+        lines = self.action.splitlines()
+        start = lines.index("          python - \"$report_path\" <<'PY'")
+        end = lines.index("        } >> \"$GITHUB_OUTPUT\"", start)
+        heredoc = lines[start + 1 : end]
+        self.assertIn("        import json", heredoc)
+        self.assertIn("        PY", heredoc)
+        self.assertNotIn("import json", heredoc)
+        self.assertNotIn("PY", heredoc)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -90,7 +90,7 @@ jobs:
         with:
           source: benchmarks/input-controls
           command: python3 reproduce.py
-          match: INPUT_CONTROLS_FAILURE
+          exit-code: "7"
           adapter: none
           source-reducer: none
           output: .repomin-action-smoke
@@ -103,11 +103,19 @@ jobs:
           ACTUAL_PAYLOAD: ${{ steps.repomin.outputs.payload-path }}
           ACTUAL_REPORT: ${{ steps.repomin.outputs.report-path }}
           ACTUAL_ARTIFACT: ${{ steps.repomin.outputs.artifact-name }}
+          ACTUAL_SCHEMA: ${{ steps.repomin.outputs.report-schema-version }}
+          ACTUAL_SOURCE_FILES: ${{ steps.repomin.outputs.source-files }}
+          ACTUAL_OUTPUT_FILES: ${{ steps.repomin.outputs.output-files }}
+          ACTUAL_HOLDOUT: ${{ steps.repomin.outputs.holdout-status }}
         run: |
           set -euo pipefail
           [[ "$ACTUAL_PAYLOAD" == "$EXPECTED_PAYLOAD" ]]
           [[ "$ACTUAL_REPORT" == "$EXPECTED_REPORT" ]]
           [[ "$ACTUAL_ARTIFACT" == "action-smoke" ]]
+          [[ "$ACTUAL_SCHEMA" == "1" ]]
+          [[ "$ACTUAL_SOURCE_FILES" =~ ^[0-9]+$ ]]
+          [[ "$ACTUAL_OUTPUT_FILES" =~ ^[0-9]+$ ]]
+          [[ "$ACTUAL_HOLDOUT" == "not_requested" ]]
       - name: Download and validate action artifact
         uses: actions/download-artifact@v6
         with:

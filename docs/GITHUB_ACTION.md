@@ -29,10 +29,39 @@ CI; the version above is the current pre-release.
 
 ## Inputs
 
-`command` and `match` are required. `source`, `output`, `adapter`,
-`source-reducer`, `backend`, `docker-image`, `docker-network`, `timeout`, and
-`jobs` map directly to the corresponding CLI options. `python-version` selects
-the action runtime, and `artifact-name` controls the uploaded artifact name.
+`command` is required. Set at least one of `match`, `exit-code`, or
+`process-failure` to define the failure oracle. `match` is useful when the
+failure text is stable; `exit-code` is safer when test output changes between
+runs; `process-failure: true` learns and preserves the exact signal or process
+termination signature. `exit-code` and `process-failure` are mutually
+exclusive, while `match` may be combined with either to narrow the oracle.
+
+`source`, `output`, `adapter`, `source-reducer`, `backend`, `docker-image`,
+`docker-network`, `timeout`, and `jobs` map directly to the corresponding CLI
+options. `python-version` selects the action runtime, and `artifact-name`
+controls the uploaded artifact name.
+
+For a fresh final certification, set all three holdout inputs. The action keeps
+holdout samples separate from ordinary candidate evidence and reports the
+result through `holdout-status`:
+
+```yaml
+    holdout-runs: "5"
+    min-holdout-rate: "0.8"
+    holdout-confidence: "0.95"
+```
+
+For a command with a stable exit code but unstable output:
+
+```yaml
+- name: Minimize failure
+  if: ${{ failure() }}
+  uses: fly1d/repomin@v0.1.0.dev4
+  with:
+    command: python -m pytest -q
+    exit-code: "1"
+    adapter: python
+```
 The default backend is `host`; use Docker when the command should run inside an
 existing local image:
 
@@ -51,8 +80,10 @@ existing local image:
 ## Outputs
 
 Give the action an `id` when a later step needs to inspect the generated files.
-The action exposes absolute workspace paths for the payload and report, plus
-the artifact name:
+The action exposes absolute workspace paths for the payload and report, the
+artifact name, and scalar report facts useful for downstream gates:
+`report-schema-version`, `source-files`, `output-files`, `attempts`,
+`accepted-mutations`, and `holdout-status`.
 
 ```yaml
 - name: Minimize failure
@@ -73,8 +104,12 @@ the artifact name:
 
 `payload-path` points to the minimized tree, `report-path` points to its
 `report.json`, and `artifact-name` is the name passed to
-`actions/upload-artifact`. Report validation returns exit code `2` for an
-invalid report or payload fingerprint, so it can be used as a CI gate without
+`actions/upload-artifact`. The numeric outputs are copied from the generated
+report and are strings, as required by the Actions output protocol.
+`holdout-status` is `not_requested` when no holdout inputs are supplied.
+The action validates the report and payload fingerprint before publishing its
+outputs. Report validation returns exit code `2` for an invalid report or
+payload fingerprint, so it can also be used as a later CI gate without
 rerunning the original failure command.
 
 `source` and `output` must be repository-relative paths and cannot escape the

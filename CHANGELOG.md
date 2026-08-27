@@ -25,12 +25,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   CLI entry points, and links the release checksums and runnable examples.
 - Source distributions now retain the requirements-chain fixture and the
   contributor preflight script used by the documented workflows.
+- The GitHub Action now accepts exit-code and process-failure oracles for
+  workflows whose output is unstable, can run a fresh holdout certification,
+  and exposes report schema, reduction-size, attempt, mutation, and holdout
+  outputs for downstream CI gates.
 
 ### Changed
 
 - Release instructions now use the runtime version as the packaging source of
   truth, check all pinned documentation references, and verify wheel and source
   distribution installs outside the checkout.
+- The contributor and support entry points now include a structured real-failure
+  issue template and a short claim-to-PR workflow.
 
 ## [0.1.0.dev4] - 2026-08-27
 

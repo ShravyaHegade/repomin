@@ -14,13 +14,52 @@ outputs:
   artifact-name:
     description: Name of the uploaded GitHub Actions artifact
     value: ${{ inputs.artifact-name }}
+  report-schema-version:
+    description: Machine-readable report schema version
+    value: ${{ steps.reduce.outputs.report-schema-version }}
+  source-files:
+    description: Number of files in the source tree before reduction
+    value: ${{ steps.reduce.outputs.source-files }}
+  output-files:
+    description: Number of files in the minimized payload
+    value: ${{ steps.reduce.outputs.output-files }}
+  attempts:
+    description: Logical candidate attempts performed by the reducer
+    value: ${{ steps.reduce.outputs.attempts }}
+  accepted-mutations:
+    description: Candidate mutations promoted into the minimized tree
+    value: ${{ steps.reduce.outputs.accepted-mutations }}
+  holdout-status:
+    description: Final holdout certification status from report.json
+    value: ${{ steps.reduce.outputs.holdout-status }}
 inputs:
   command:
     description: Shell command that reproduces the failure
     required: true
   match:
-    description: Regular expression that must remain in command output
-    required: true
+    description: Optional regular expression that must remain in command output
+    required: false
+    default: ""
+  exit-code:
+    description: Optional exact process exit code required by the failure oracle
+    required: false
+    default: ""
+  process-failure:
+    description: Learn and preserve the exact process termination signature
+    required: false
+    default: "false"
+  holdout-runs:
+    description: Optional fresh samples used for final holdout certification
+    required: false
+    default: ""
+  min-holdout-rate:
+    description: Optional minimum one-sided holdout pass rate
+    required: false
+    default: ""
+  holdout-confidence:
+    description: Optional confidence level for holdout certification
+    required: false
+    default: ""
   source:
     description: Repository-relative source directory
     required: false
@@ -84,6 +123,11 @@ runs:
         REPOMIN_OUTPUT: ${{ inputs.output }}
         REPOMIN_COMMAND: ${{ inputs.command }}
         REPOMIN_MATCH: ${{ inputs.match }}
+        REPOMIN_EXIT_CODE: ${{ inputs.exit-code }}
+        REPOMIN_PROCESS_FAILURE: ${{ inputs.process-failure }}
+        REPOMIN_HOLDOUT_RUNS: ${{ inputs.holdout-runs }}
+        REPOMIN_MIN_HOLDOUT_RATE: ${{ inputs.min-holdout-rate }}
+        REPOMIN_HOLDOUT_CONFIDENCE: ${{ inputs.holdout-confidence }}
         REPOMIN_ADAPTER: ${{ inputs.adapter }}
         REPOMIN_SOURCE_REDUCER: ${{ inputs.source-reducer }}
         REPOMIN_BACKEND: ${{ inputs.backend }}
@@ -110,11 +154,25 @@ runs:
           echo "docker-image is required when backend is docker" >&2
           exit 2
         fi
+        case "$REPOMIN_PROCESS_FAILURE" in
+          true|false) ;;
+          *)
+            echo "process-failure must be true or false" >&2
+            exit 2
+            ;;
+        esac
+        if [[ -z "$REPOMIN_MATCH" && -z "$REPOMIN_EXIT_CODE" && "$REPOMIN_PROCESS_FAILURE" != true ]]; then
+          echo "set match, exit-code, or process-failure so the failure oracle is explicit" >&2
+          exit 2
+        fi
+        if [[ -n "$REPOMIN_EXIT_CODE" && "$REPOMIN_PROCESS_FAILURE" == true ]]; then
+          echo "exit-code cannot be combined with process-failure" >&2
+          exit 2
+        fi
 
         args=(
           "$GITHUB_WORKSPACE/$REPOMIN_SOURCE"
           --command "$REPOMIN_COMMAND"
-          --match "$REPOMIN_MATCH"
           --output "$GITHUB_WORKSPACE/$REPOMIN_OUTPUT"
           --adapter "$REPOMIN_ADAPTER"
           --source-reducer "$REPOMIN_SOURCE_REDUCER"
@@ -123,6 +181,24 @@ runs:
           --timeout "$REPOMIN_TIMEOUT"
           --jobs "$REPOMIN_JOBS"
         )
+        if [[ -n "$REPOMIN_MATCH" ]]; then
+          args+=(--match "$REPOMIN_MATCH")
+        fi
+        if [[ -n "$REPOMIN_EXIT_CODE" ]]; then
+          args+=(--exit-code "$REPOMIN_EXIT_CODE")
+        fi
+        if [[ "$REPOMIN_PROCESS_FAILURE" == true ]]; then
+          args+=(--process-failure)
+        fi
+        if [[ -n "$REPOMIN_HOLDOUT_RUNS" ]]; then
+          args+=(--holdout-runs "$REPOMIN_HOLDOUT_RUNS")
+        fi
+        if [[ -n "$REPOMIN_MIN_HOLDOUT_RATE" ]]; then
+          args+=(--min-holdout-rate "$REPOMIN_MIN_HOLDOUT_RATE")
+        fi
+        if [[ -n "$REPOMIN_HOLDOUT_CONFIDENCE" ]]; then
+          args+=(--holdout-confidence "$REPOMIN_HOLDOUT_CONFIDENCE")
+        fi
         if [[ "$REPOMIN_BACKEND" == docker ]]; then
           args+=(--docker-image "$REPOMIN_DOCKER_IMAGE")
         fi
@@ -133,9 +209,32 @@ runs:
           echo "ReproMin did not produce the expected payload and report paths" >&2
           exit 1
         fi
+        repomin report validate "$report_path" --payload "$payload_path" --json >/dev/null
         {
           printf 'payload-path=%s\n' "$payload_path"
           printf 'report-path=%s\n' "$report_path"
+          python - "$report_path" <<'PY'
+        import json
+        import sys
+
+        with open(sys.argv[1], encoding="utf-8") as stream:
+            report = json.load(stream)
+
+        required = {
+            "report-schema-version": report.get("schema_version"),
+            "source-files": report.get("source", {}).get("files"),
+            "output-files": report.get("output", {}).get("files"),
+            "attempts": report.get("attempts"),
+            "accepted-mutations": report.get("accepted_mutations"),
+            "holdout-status": report.get("holdout_certification", {}).get("status"),
+        }
+        if any(value is None for value in required.values()):
+            raise SystemExit("generated report is missing an action output field")
+        for name, value in required.items():
+            if isinstance(value, (dict, list, bool)):
+                raise SystemExit("generated report action output is not scalar: " + name)
+            print(f"{name}={value}")
+        PY
         } >> "$GITHUB_OUTPUT"
     - name: Upload minimized reproduction
       uses: actions/upload-artifact@v6
