@@ -9,8 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Offline benchmark JSON summaries now record the ReproMin version used for the
-  run, making cross-version fixture comparisons auditable.
+- Offline benchmark JSON summaries and comparison output now record the
+  ReproMin version used for each run, making cross-version fixture comparisons
+  auditable.
 
 ## [0.1.0.dev4] - 2026-08-27
 
