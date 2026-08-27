@@ -60,6 +60,22 @@ inputs:
     description: Optional confidence level for holdout certification
     required: false
     default: ""
+  ignore:
+    description: Newline-separated exact file or directory basenames to exclude
+    required: false
+    default: ""
+  ignore-path:
+    description: Newline-separated exact repository-relative paths to exclude
+    required: false
+    default: ""
+  gitignore:
+    description: Apply the repository .gitignore as an additional exclusion
+    required: false
+    default: "false"
+  gitignore-recursive:
+    description: Apply root and nested .gitignore files
+    required: false
+    default: "false"
   source:
     description: Repository-relative source directory
     required: false
@@ -128,6 +144,10 @@ runs:
         REPOMIN_HOLDOUT_RUNS: ${{ inputs.holdout-runs }}
         REPOMIN_MIN_HOLDOUT_RATE: ${{ inputs.min-holdout-rate }}
         REPOMIN_HOLDOUT_CONFIDENCE: ${{ inputs.holdout-confidence }}
+        REPOMIN_IGNORE: ${{ inputs.ignore }}
+        REPOMIN_IGNORE_PATH: ${{ inputs.ignore-path }}
+        REPOMIN_GITIGNORE: ${{ inputs.gitignore }}
+        REPOMIN_GITIGNORE_RECURSIVE: ${{ inputs.gitignore-recursive }}
         REPOMIN_ADAPTER: ${{ inputs.adapter }}
         REPOMIN_SOURCE_REDUCER: ${{ inputs.source-reducer }}
         REPOMIN_BACKEND: ${{ inputs.backend }}
@@ -158,6 +178,20 @@ runs:
           true|false) ;;
           *)
             echo "process-failure must be true or false" >&2
+            exit 2
+            ;;
+        esac
+        case "$REPOMIN_GITIGNORE" in
+          true|false) ;;
+          *)
+            echo "gitignore must be true or false" >&2
+            exit 2
+            ;;
+        esac
+        case "$REPOMIN_GITIGNORE_RECURSIVE" in
+          true|false) ;;
+          *)
+            echo "gitignore-recursive must be true or false" >&2
             exit 2
             ;;
         esac
@@ -198,6 +232,24 @@ runs:
         fi
         if [[ -n "$REPOMIN_HOLDOUT_CONFIDENCE" ]]; then
           args+=(--holdout-confidence "$REPOMIN_HOLDOUT_CONFIDENCE")
+        fi
+        append_repeated_option() {
+          local option="$1"
+          local values="$2"
+          local value
+          while IFS= read -r value; do
+            value="${value%$'\r'}"
+            [[ -z "$value" ]] && continue
+            args+=("$option" "$value")
+          done <<< "$values"
+        }
+        append_repeated_option --ignore "$REPOMIN_IGNORE"
+        append_repeated_option --ignore-path "$REPOMIN_IGNORE_PATH"
+        if [[ "$REPOMIN_GITIGNORE" == true ]]; then
+          args+=(--gitignore)
+        fi
+        if [[ "$REPOMIN_GITIGNORE_RECURSIVE" == true ]]; then
+          args+=(--gitignore-recursive)
         fi
         if [[ "$REPOMIN_BACKEND" == docker ]]; then
           args+=(--docker-image "$REPOMIN_DOCKER_IMAGE")

@@ -41,6 +41,22 @@ exclusive, while `match` may be combined with either to narrow the oracle.
 options. `python-version` selects the action runtime, and `artifact-name`
 controls the uploaded artifact name.
 
+`ignore` and `ignore-path` accept one exact entry per line. Use them for
+secrets or private fixtures that must never enter the uploaded payload;
+`gitignore: true` applies the repository's root `.gitignore`, and
+`gitignore-recursive: true` also applies nested rule files. These exclusions are
+passed as structured arguments, not evaluated as shell code. A missing rule
+file or invalid path causes the action to fail before it publishes an artifact.
+
+```yaml
+    ignore: |
+      .env
+      credentials
+    ignore-path: |
+      test/private-fixtures
+    gitignore: true
+```
+
 For a fresh final certification, set all three holdout inputs. The action keeps
 holdout samples separate from ordinary candidate evidence and reports the
 result through `holdout-status`:

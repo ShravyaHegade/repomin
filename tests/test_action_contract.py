@@ -56,6 +56,20 @@ class ActionContractTests(unittest.TestCase):
             'args+=(--holdout-confidence "$REPOMIN_HOLDOUT_CONFIDENCE")', self.action
         )
 
+    def test_privacy_exclusion_inputs_are_forwarded_as_repeated_options(self) -> None:
+        for name in ("ignore", "ignore-path", "gitignore", "gitignore-recursive"):
+            self.assertIn("  %s:\n" % name, self.action)
+            variable = "REPOMIN_%s" % name.upper().replace("-", "_")
+            self.assertIn(variable, self.action)
+        self.assertIn("append_repeated_option --ignore \"$REPOMIN_IGNORE\"", self.action)
+        self.assertIn(
+            "append_repeated_option --ignore-path \"$REPOMIN_IGNORE_PATH\"",
+            self.action,
+        )
+        self.assertIn("args+=(--gitignore)", self.action)
+        self.assertIn("args+=(--gitignore-recursive)", self.action)
+        self.assertIn("value=\"${value%$'\\r'}\"", self.action)
+
     def test_smoke_workflow_exercises_exit_code_and_outputs(self) -> None:
         self.assertIn('exit-code: "7"', self.workflow)
         self.assertNotIn("          match: INPUT_CONTROLS_FAILURE", self.workflow)
@@ -69,6 +83,8 @@ class ActionContractTests(unittest.TestCase):
         self.assertIn("unstable output", self.docs)
         self.assertIn("holdout-status", self.docs)
         self.assertIn("min-holdout-rate", self.docs)
+        self.assertIn("ignore-path", self.docs)
+        self.assertIn("gitignore-recursive", self.docs)
 
     def test_embedded_output_reader_is_indented_inside_yaml_block(self) -> None:
         lines = self.action.splitlines()

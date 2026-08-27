@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   workflows whose output is unstable, can run a fresh holdout certification,
   and exposes report schema, reduction-size, attempt, mutation, and holdout
   outputs for downstream CI gates.
+- The GitHub Action can now forward newline-separated exact ignore rules and
+  repository `.gitignore` settings, making artifact privacy controls usable in
+  the CI integration itself.
 
 ### Changed
 
