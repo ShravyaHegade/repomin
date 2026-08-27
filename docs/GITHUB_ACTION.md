@@ -48,6 +48,35 @@ existing local image:
     docker-network: none
 ```
 
+## Outputs
+
+Give the action an `id` when a later step needs to inspect the generated files.
+The action exposes absolute workspace paths for the payload and report, plus
+the artifact name:
+
+```yaml
+- name: Minimize failure
+  if: ${{ failure() }}
+  id: minimize
+  uses: fly1d/repomin@v0.1.0.dev3
+  with:
+    command: python -m pytest -q
+    match: "FAILED tests/test_regression.py"
+
+- name: Validate minimized report
+  if: ${{ always() && steps.minimize.conclusion == 'success' }}
+  run: |
+    repomin report validate \
+      "${{ steps.minimize.outputs.report-path }}" \
+      --payload "${{ steps.minimize.outputs.payload-path }}" --json
+```
+
+`payload-path` points to the minimized tree, `report-path` points to its
+`report.json`, and `artifact-name` is the name passed to
+`actions/upload-artifact`. Report validation returns exit code `2` for an
+invalid report or payload fingerprint, so it can be used as a CI gate without
+rerunning the original failure command.
+
 `source` and `output` must be repository-relative paths and cannot escape the
 workspace. The command is intentionally passed to the configured ReproMin
 runner; do not use this action with untrusted workflow input. The host backend

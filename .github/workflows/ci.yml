@@ -85,6 +85,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Run local ReproMin action
+        id: repomin
         uses: ./
         with:
           source: benchmarks/input-controls
@@ -94,6 +95,19 @@ jobs:
           source-reducer: none
           output: .repomin-action-smoke
           artifact-name: action-smoke
+      - name: Check action outputs
+        shell: bash
+        env:
+          EXPECTED_PAYLOAD: ${{ github.workspace }}/.repomin-action-smoke
+          EXPECTED_REPORT: ${{ github.workspace }}/.repomin-action-smoke.repomin/report.json
+          ACTUAL_PAYLOAD: ${{ steps.repomin.outputs.payload-path }}
+          ACTUAL_REPORT: ${{ steps.repomin.outputs.report-path }}
+          ACTUAL_ARTIFACT: ${{ steps.repomin.outputs.artifact-name }}
+        run: |
+          set -euo pipefail
+          [[ "$ACTUAL_PAYLOAD" == "$EXPECTED_PAYLOAD" ]]
+          [[ "$ACTUAL_REPORT" == "$EXPECTED_REPORT" ]]
+          [[ "$ACTUAL_ARTIFACT" == "action-smoke" ]]
       - name: Download and validate action artifact
         uses: actions/download-artifact@v6
         with:

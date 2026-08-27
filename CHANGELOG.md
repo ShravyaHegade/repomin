@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- GitHub Action outputs now expose the minimized payload path, report path, and
+  artifact name for downstream CI steps.
+
 ## [0.1.0.dev3] - 2026-08-26
 
 ### Fixed

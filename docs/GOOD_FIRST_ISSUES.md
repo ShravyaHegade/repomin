@@ -11,9 +11,6 @@ These issues are intentionally small and have explicit acceptance criteria:
 - [Add a runnable Java and Gradle reduction example](https://github.com/fly1d/repomin/issues/12)
   - documentation-first; demonstrates a complete structured reduction and its
     report validation boundary.
-- [Show report validation as a CI gate](https://github.com/fly1d/repomin/issues/13)
-  - documentation-first; demonstrates JSON validation, payload fingerprints,
-    and the Action artifact contract.
 
 The [real CI failure pilot](https://github.com/fly1d/repomin/issues/11) is also
 open for users who have a sanitized workflow to share. Check the repository's
