@@ -1,14 +1,17 @@
 # Examples
 
+> **Required before you start:** `--output` must be outside the source
+> repository (the directory passed as `SOURCE`). ReproMin rejects an output
+> path inside that tree. Use a sibling directory or an absolute temporary
+> directory, such as `--output ../example-minimal` or
+> `--output "$out_parent/result"`; do not use `--output ./reduced`. ReproMin
+> writes the evidence sidecar next to the payload at
+> `<output>.repomin/`, so that directory stays outside the source tree too.
+
 The host-backend examples are self-contained and use only Python. Run them from
 a scratch directory after installing ReproMin in editable mode. The Docker and
 semantic examples near the end use the repository fixtures so their trust
 boundaries and provider contract are explicit.
-
-> Keep every `--output` directory outside the source repository. ReproMin
-> rejects an output path inside the input tree so candidate mutations and the
-> exported artifact cannot affect the source being reduced. The examples use a
-> sibling directory or a temporary directory for this reason.
 
 ## Shrink a Python failure to its required files
 
@@ -64,12 +67,28 @@ accepted mutations, and phase accounting.
 
 ## Shrink a requirements include chain
 
-The repository includes a network-free Python fixture that mirrors a common CI
-layout: a root `requirements.txt` includes separate runtime and CI files, and
-those files share a constraints file. Hash continuations and index options are
-kept only when they belong to a dependency that remains in the failure.
+This copy-paste example exercises the Python requirements adapter against a
+network-free fixture. It follows a two-level include chain and a shared
+constraints file:
 
-From the repository root, run:
+```text
+requirements.txt
+  -r requirements/runtime.txt
+  -c constraints.txt
+requirements/runtime.txt
+  repomin-runtime==1.2.3 \
+    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  -r ci.txt
+requirements/ci.txt
+  repomin-ci-runner==4.5.0
+constraints.txt
+  repomin-runtime<2
+  repomin-ci-runner<5
+```
+
+The fixture's oracle requires every link above, including the backslash-
+continued hash. Unused requirements and package-index options are deliberately
+present as removable noise. From the repository root, run:
 
 ```sh
 out_parent="$(mktemp -d /tmp/repomin-requirements.XXXXXX)"
@@ -81,9 +100,23 @@ PYTHONPATH=src python3 -m repomin benchmarks/python-requirements \
   --output "$out_parent/result"
 ```
 
-The minimized payload keeps `reproduce.py`, `requirements.txt`,
-`requirements/runtime.txt`, `requirements/ci.txt`, and `constraints.txt`. The
-sidecar at `$out_parent/result.repomin/report.json` can be checked without
+The command does not install anything or contact a package index. The
+minimized payload should contain exactly the five files below; inspect it with
+the following command:
+
+```sh
+find "$out_parent/result" -type f -print | sort
+```
+
+```text
+constraints.txt
+reproduce.py
+requirements.txt
+requirements/ci.txt
+requirements/runtime.txt
+```
+
+The sidecar at `$out_parent/result.repomin/report.json` can be checked without
 rerunning the reducer:
 
 ```sh
@@ -92,8 +125,9 @@ PYTHONPATH=src python3 -m repomin report validate \
   --payload "$out_parent/result" --json
 ```
 
-This fixture does not install packages or contact a package index; its oracle
-only checks the dependency declarations and exits with `ORIGINAL_FAILURE`.
+The validator checks the report schema and payload fingerprint; the fixture's
+oracle only checks the dependency declarations and exits with
+`ORIGINAL_FAILURE`.
 
 ## Shrink a Pipenv `Pipfile`
 
