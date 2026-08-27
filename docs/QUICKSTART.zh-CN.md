@@ -90,6 +90,26 @@ repomin report validate "$demo_dir/reduced.repomin/report.json" \
 `--command`，也不等于证明代码或失败根因的正确性。报告格式错误、统计不一致或指纹不匹配
 时，命令以退出码 `2` 结束。
 
+## 在全新副本中重放失败
+
+先检查报告中记录的命令，再显式允许执行：
+
+```sh
+repomin report replay "$demo_dir/reduced.repomin/report.json" \
+  --payload "$demo_dir/reduced" \
+  --runs 2 \
+  --yes
+```
+
+每次运行都会从原 payload 创建独立临时副本，命令不会直接在
+`reduced/` 中执行。现代报告会精确记录 oracle 配置、超时和 payload
+树指纹；旧报告若无法区分普通非零退出与精确退出码，会要求显式提供
+`--exit-code N`，而不是自行猜测。
+
+报告本身没有签名，里面的 `command` 可能执行任意代码。`--yes` 只是确认你已
+审阅命令，并不提供沙箱。退出码 `0` 只表示当前环境下所有 replay 都匹配 oracle，
+不是正确性、根因或生产可靠性证明。详细边界见[重放指南](REPLAY.md)。
+
 ## Oracle 是什么
 
 `--command` 是失败复现命令，`--match` 是必须继续出现在 stdout 或 stderr 中的正则表达式。上面的示例要求命令继续输出 `ORIGINAL_FAILURE` 并以非零状态退出。

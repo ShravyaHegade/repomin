@@ -57,6 +57,7 @@ from repomin.report import (
     verify_existing_report,
     write_report,
 )
+from repomin.replay import ReplayError, format_replay, replay_report
 from repomin.semantic import (
     HttpSemanticBackend,
     NoopSemanticBackend,
@@ -1299,9 +1300,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     args.command,
                     args.match,
                     metadata_output,
+                    failure_spec=oracle.spec,
+                    timeout_seconds=args.timeout,
                 )
             else:
-                write_report(result, args.command, args.match, metadata_output)
+                write_report(
+                    result,
+                    args.command,
+                    args.match,
+                    metadata_output,
+                    failure_spec=oracle.spec,
+                    timeout_seconds=args.timeout,
+                )
             session.mark_completed()
         finally:
             session.close()
@@ -1505,12 +1515,18 @@ def _doctor_command(argv: Sequence[str]) -> int:
 def _report_command(argv: Sequence[str]) -> int:
     """Handle report inspection commands without changing reduction parsing."""
     if not argv or argv[0] in {"-h", "--help"}:
-        print("usage: repomin report validate REPORT [--payload DIRECTORY]")
-        print("validate a machine-readable report and optional payload fingerprint")
+        print("usage: repomin report {validate,replay} ...")
+        print("validate report evidence or replay its failure in fresh copies")
         return 0
-    if argv[0] != "validate":
-        print("repomin report: unsupported command %r" % argv[0], file=sys.stderr)
-        return 2
+    if argv[0] == "validate":
+        return _report_validate_command(argv[1:])
+    if argv[0] == "replay":
+        return _report_replay_command(argv[1:])
+    print("repomin report: unsupported command %r" % argv[0], file=sys.stderr)
+    return 2
+
+
+def _report_validate_command(argv: Sequence[str]) -> int:
     parser = argparse.ArgumentParser(prog="repomin report validate")
     parser.add_argument("report", type=Path, help="report.json to validate")
     parser.add_argument(
@@ -1524,7 +1540,7 @@ def _report_command(argv: Sequence[str]) -> int:
         help="print a compact machine-readable validation result",
     )
     try:
-        args = parser.parse_args(list(argv[1:]))
+        args = parser.parse_args(list(argv))
         report = validate_report_file(args.report, args.payload)
     except (ReportValidationError, ValueError, OSError) as exc:
         print("repomin report: %s" % exc, file=sys.stderr)
@@ -1550,6 +1566,10 @@ def _report_command(argv: Sequence[str]) -> int:
     if args.payload is not None:
         result["payload"] = str(args.payload.resolve())
         result["payload_checked"] = True
+        result["payload_fingerprint_verified"] = bool(
+            output.get("tree_sha256")
+            or report["holdout_certification"].get("artifact_fingerprint")
+        )
     if args.json:
         print(json.dumps(result, sort_keys=True))
     else:
@@ -1558,6 +1578,113 @@ def _report_command(argv: Sequence[str]) -> int:
             % (result["schema_version"], result["holdout_status"])
         )
     return 0
+
+
+def _report_replay_command(argv: Sequence[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="repomin report replay",
+        description=(
+            "Execute the command stored in a report against fresh payload copies. "
+            "The command is untrusted; review the report before passing --yes."
+        ),
+    )
+    parser.add_argument("report", type=Path, help="report.json containing the command")
+    parser.add_argument(
+        "--payload",
+        type=Path,
+        required=True,
+        help="exported payload directory to copy for every replay run",
+    )
+    parser.add_argument(
+        "--runs",
+        type=int,
+        default=1,
+        help="fresh replay copies to execute; every run must pass (default: 1)",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        help="seconds per run (default: recorded value, otherwise 120)",
+    )
+    parser.add_argument(
+        "--env",
+        dest="environment_entries",
+        action="append",
+        type=_parse_environment,
+        default=[],
+        metavar="NAME=VALUE",
+        help="recorded explicit environment override; repeatable",
+    )
+    parser.add_argument(
+        "--backend",
+        choices=("recorded", "host", "docker"),
+        default="recorded",
+        help="execution backend (default: backend recorded in report)",
+    )
+    parser.add_argument(
+        "--docker-image",
+        help="explicit local Docker image override; never pulled",
+    )
+    parser.add_argument(
+        "--docker-network",
+        choices=("none", "bridge", "host"),
+        help="Docker network policy (default: none, even if report differs)",
+    )
+    parser.add_argument(
+        "--exit-code",
+        type=int,
+        dest="legacy_exit_code",
+        help="explicit contract for an ambiguous legacy report",
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="acknowledge execution of the untrusted command stored in the report",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print machine-readable replay evidence without raw command output",
+    )
+    args = parser.parse_args(list(argv))
+    try:
+        if not args.yes:
+            raise ReplayError(
+                "replay executes the command stored in the report; review it and pass --yes"
+            )
+        environment = _environment_mapping(args.environment_entries)
+        reproduced, result = replay_report(
+            args.report,
+            args.payload,
+            runs=args.runs,
+            timeout_seconds=args.timeout,
+            environment=environment,
+            backend=args.backend,
+            docker_image=args.docker_image,
+            docker_network=args.docker_network,
+            legacy_exit_code=args.legacy_exit_code,
+        )
+    except KeyboardInterrupt:
+        print("repomin report replay: interrupted", file=sys.stderr)
+        return 130
+    except (
+        OSError,
+        OracleError,
+        ReplayError,
+        ReportValidationError,
+        RunnerError,
+        SessionError,
+    ) as exc:
+        if args.json:
+            print(json.dumps({"reproduced": False, "error": str(exc)}, sort_keys=True))
+        else:
+            print("repomin report replay: %s" % exc, file=sys.stderr)
+        return 2
+    if args.json:
+        print(json.dumps(result, sort_keys=True))
+    else:
+        print(format_replay(result), end="")
+    return 0 if reproduced else 1
 
 
 def _run_fixed_point(

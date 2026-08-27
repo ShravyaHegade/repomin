@@ -395,7 +395,13 @@ class DockerRunner:
         workspace_limit_bytes: Optional[int] = None,
         executable: Optional[str] = None,
     ) -> None:
-        if not image or image.startswith("-") or any(char.isspace() for char in image):
+        if (
+            not isinstance(image, str)
+            or not image
+            or "\x00" in image
+            or image.startswith("-")
+            or any(char.isspace() for char in image)
+        ):
             raise RunnerError("invalid Docker image reference: %s" % image)
         if network not in {"none", "bridge", "host"}:
             raise RunnerError("unsupported Docker network policy: %s" % network)
@@ -517,6 +523,14 @@ class DockerRunner:
         for name, value in sorted(self.environment.items()):
             if not _valid_environment_name(name):
                 raise RunnerError("invalid container environment variable: %s" % name)
+            if not isinstance(value, str):
+                raise RunnerError(
+                    "invalid container environment value: %s" % name
+                )
+            if "\x00" in value:
+                raise RunnerError(
+                    "invalid NUL in container environment variable: %s" % name
+                )
             command.extend(["--env", "%s=%s" % (name, value)])
         execution_image = self.resolved_image_id or self.image_reference
         command.extend([execution_image, "/bin/sh", "-c", self.command])
@@ -655,7 +669,7 @@ def _run_process(
                 creationflags=creationflags,
                 **popen_options,
             )
-        except OSError as exc:
+        except (OSError, ValueError) as exc:
             raise RunnerError(
                 "failed to start reproduction command: %s" % exc
             ) from exc
@@ -1148,7 +1162,7 @@ def _run_check(argv: Sequence[str], message: str) -> str:
             timeout=10,
             check=False,
         )
-    except (OSError, subprocess.TimeoutExpired) as exc:
+    except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
         raise RunnerError("%s: %s" % (message, exc)) from exc
     if completed.returncode != 0:
         detail = (completed.stderr or completed.stdout).strip().splitlines()

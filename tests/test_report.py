@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from repomin.cli import main
-from repomin.model import ReductionResult, ReductionStats, RunResult
+from repomin.model import FailureSpec, ReductionResult, ReductionStats, RunResult
 from repomin.report import (
     ReportValidationError,
     _build_report,
@@ -59,6 +59,58 @@ def _report() -> dict:
 
 
 class ReportValidationTest(unittest.TestCase):
+    def test_generated_report_records_replay_contract_and_output_fingerprint(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "reduced"
+            output.mkdir()
+            (output / "case.txt").write_text("failure\n", encoding="utf-8")
+            result = ReductionResult(
+                output=output,
+                stats=ReductionStats(
+                    source_files=1,
+                    source_bytes=8,
+                    output_files=1,
+                    output_bytes=8,
+                ),
+                baseline=RunResult(7, "", "failure", 0.0),
+                final_run=RunResult(7, "", "failure", 0.0),
+            )
+
+            report = _build_report(
+                result,
+                "python3 reproduce.py",
+                "failure",
+                failure_spec=FailureSpec("failure", exit_code=7),
+                timeout_seconds=30.0,
+            )
+
+            self.assertEqual(30.0, report["execution"]["timeout_seconds"])
+            self.assertEqual(7, report["failure_spec"]["exit_code"])
+            self.assertEqual(
+                _tree_digest(output, set()),
+                report["output"]["tree_sha256"],
+            )
+            self.assertIs(validate_report_document(report), report)
+
+    def test_rejects_inconsistent_replay_contract(self) -> None:
+        report = _report()
+        report["failure_spec"] = {
+            "schema_version": 1,
+            "match": "DIFFERENT",
+            "exit_code": None,
+            "java_exception": False,
+            "python_exception": False,
+            "process_failure": False,
+        }
+        with self.assertRaisesRegex(ReportValidationError, "failure_match"):
+            validate_report_document(report)
+
+    def test_rejects_orphaned_output_fingerprint_policy(self) -> None:
+        report = _report()
+        report["output"]["tree_fingerprint_policy"] = "tree-sha256-v2"
+        with self.assertRaisesRegex(ReportValidationError, "requires tree_sha256"):
+            validate_report_document(report)
+
     def test_generated_report_records_repomin_version(self) -> None:
         result = ReductionResult(
             output=Path("reduced"),

@@ -24,6 +24,8 @@ dates. Concrete contribution tasks live in
   holdout, and privacy-exclusion inputs, plus validated report summary outputs.
 - A read-only `repomin doctor` preflight for reducer/toolchain discovery, output
   collision checks, and optional fresh-copy baseline verification.
+- A privacy-conscious `repomin report replay` workflow with exact modern
+  failure contracts, payload fingerprints, and isolated fresh-copy samples.
 - A structured real-failure issue template and a short claim-to-PR workflow for
   contributors who can share sanitized CI or dependency failures.
 

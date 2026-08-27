@@ -38,6 +38,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A read-only `repomin doctor` preflight now detects supported reducers and
   toolchains and can verify a failure baseline in fresh copies before a costly
   reduction.
+- `repomin report replay` now verifies a payload and executes its recorded
+  failure contract in independent fresh copies, with strict environment digest
+  checks, private JSON evidence, and explicit command acknowledgement.
+- New reports now preserve the exact `failure_spec`, per-command timeout, and a
+  tree fingerprint for every exported payload, not only certified holdouts.
 - The GitHub Action now uses the runner temporary directory when `output` is
   omitted, so the default `source: .` workflow does not place reducer output
   inside the repository. It also exposes metadata-path and source/output byte

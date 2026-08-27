@@ -17,6 +17,7 @@ version, and never infer code correctness from a passing oracle.
 | `repomin_version` | ReproMin version that generated the report. Optional in legacy reports. |
 | `command` | Exact reproduction command passed to the runner. |
 | `failure_match` | Configured output regular expression, or `null` for process/exit-code modes. |
+| `failure_spec` | Exact match, exit-code, and signature-mode flags used for replay. Optional in legacy reports. |
 | `baseline_exit_code` | Return code observed during baseline validation. |
 | `final_exit_code` | Return code observed during final validation of the accepted tree. |
 | `source` | File/byte counts for the copied source tree before reduction. |
@@ -33,7 +34,22 @@ version, and never infer code correctness from a passing oracle.
 | `process_failure_signature` | Present only with `--process-failure`. |
 
 `source` and `output` contain `files` and `bytes`. Output counts deliberately
-exclude `report.json` and `REPOMIN.md`.
+exclude `report.json` and `REPOMIN.md`. New reports also store
+`output.tree_sha256` and `output.tree_fingerprint_policy` for every exported
+payload, independently of optional holdout certification.
+
+## Failure contract
+
+`failure_spec` is an additive schema-v1 object that preserves the exact oracle
+configuration needed by replay: `match`, optional `exit_code`, and the boolean
+`java_exception`, `python_exception`, and `process_failure` modes. At most one
+signature mode can be true, process-failure mode cannot also configure an exit
+code, and the stored match must equal the legacy top-level `failure_match`.
+
+Java, Python, and process signature objects remain top-level fields for
+backward compatibility. When `failure_spec` selects a signature mode, exactly
+the corresponding recorded signature must be present. Replay pins this
+identity; it never learns a replacement signature from current output.
 
 ## Execution
 
@@ -52,6 +68,7 @@ Important fields include:
   `text_files`: input-selection controls applied before reduction.
 - `environment_names` and `environment_sha256`: names and a digest of explicit
   environment values. Values are intentionally never recorded.
+- `timeout_seconds`: configured timeout for each reproduction command.
 
 Docker reports additionally contain the image reference, resolved immutable
 image ID, network policy, and configured resource limits when applicable.
@@ -120,8 +137,8 @@ matching failure signature.
 
 ## Consumer guidance
 
-1. Verify `schema_version` and the payload fingerprint reported by holdout
-   certification before trusting an artifact.
+1. Verify `schema_version`, output file/byte counts, and the exported payload
+   fingerprint before trusting an artifact.
 2. Check `execution.backend`, Docker identity/policy, environment names, and
    the reproduction command before sharing the sidecar.
 3. Treat `failure_match` and signatures as the configured oracle contract, not
@@ -137,7 +154,9 @@ repomin report validate OUTPUT.repomin/report.json --payload OUTPUT
 ```
 
 It returns exit code `2` for malformed JSON, unsupported schema versions,
-inconsistent phase/holdout accounting, or a payload fingerprint mismatch.
+inconsistent phase/holdout accounting, unsafe payload entries, size drift, or
+a payload fingerprint mismatch. Legacy reports without an output or holdout
+fingerprint still receive safe-tree and file/byte-count validation.
 
 Add `--json` when a CI step or issue report needs a compact summary. In
 addition to `valid`, `schema_version`, `holdout_status`, and the report path,
@@ -145,7 +164,18 @@ the JSON result includes `repomin_version`, `backend`, source/output file and
 byte counts, `attempts`, `accepted_mutations`, and `cache_hits`. The version is
 `null` for legacy reports that predate version provenance. These fields are
 descriptive metadata copied from the validated report; they do not add a new
-correctness claim.
+correctness claim. `payload_fingerprint_verified` distinguishes a cryptographic
+tree match from count-only validation of a legacy report.
+
+After reviewing the unsigned command in a report, consumers can also run a
+fresh-copy [replay](REPLAY.md):
+
+```sh
+repomin report replay OUTPUT.repomin/report.json --payload OUTPUT --yes
+```
+
+Replay is a new current-environment observation. It does not upgrade the
+original report or create a statistical certificate.
 
 The architecture document explains the statistical contracts and reducer
 invariants behind these fields. See [ARCHITECTURE.md](ARCHITECTURE.md) and

@@ -56,6 +56,15 @@ repomin doctor . \
   --output /tmp/project-repro
 ```
 
+After a reduction, use the [replay command](docs/REPLAY.md) to check the
+recorded failure contract against fresh copies of the exported payload:
+
+```sh
+repomin report replay /tmp/project-repro.repomin/report.json \
+  --payload /tmp/project-repro \
+  --yes
+```
+
 中文用户可以先阅读[中文快速开始](docs/QUICKSTART.zh-CN.md)，其中包含一个
 可直接运行的最小缩减示例、安全边界和报告说明。
 
@@ -606,7 +615,7 @@ default command count is unchanged.
 
 Reports can be checked without rerunning the reproduction command. The command
 validates the schema and phase/holdout accounting; `--payload` additionally
-checks the certified tree fingerprint:
+checks the exported tree fingerprint and payload size:
 
 ```sh
 repomin report validate /tmp/checkout-repro.repomin/report.json \
@@ -614,6 +623,22 @@ repomin report validate /tmp/checkout-repro.repomin/report.json \
 ```
 
 Use `--json` for a compact result suitable for CI checks.
+
+To execute the report's failure command, first review the unsigned report and
+payload, then opt in explicitly. Replay validates the payload before execution
+and runs every sample in a separate temporary copy:
+
+```sh
+repomin report replay /tmp/checkout-repro.repomin/report.json \
+  --payload /tmp/checkout-repro \
+  --runs 2 \
+  --yes
+```
+
+Replay exit code `0` means only that every current-environment run matched the
+recorded oracle. It is not holdout certification or a correctness/root-cause
+proof. See [docs/REPLAY.md](docs/REPLAY.md) for legacy reports, explicit
+environment values, Docker behavior, privacy, and exit codes.
 
 ## Resumable sessions
 
@@ -1084,6 +1109,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for extension points and project rules,
   behavior, and report/checkpoint schema.
 - [docs/REPORT_SCHEMA.md](docs/REPORT_SCHEMA.md) - versioned `report.json`
   fields, accounting identities, holdout evidence, and consumer guidance.
+- [docs/REPLAY.md](docs/REPLAY.md) - fresh-copy replay, environment checks,
+  security boundaries, and machine-readable evidence.
 - [docs/LLM_REDUCTION.md](docs/LLM_REDUCTION.md) - optional semantic reducer
   seam and its provider-agnostic contract.
 - [docs/DOCTOR.md](docs/DOCTOR.md) - read-only toolchain and baseline preflight.

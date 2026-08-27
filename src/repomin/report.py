@@ -7,9 +7,17 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 from repomin import __version__
-from repomin.model import ReductionResult, TREE_FINGERPRINT_POLICY
+from repomin.model import (
+    FailureSpec,
+    ProcessFailureSignature,
+    ReductionResult,
+    TREE_FINGERPRINT_POLICY,
+)
 from repomin.session import _tree_digest
-from repomin.signature import process_failure_name
+from repomin.signature import (
+    process_failure_name,
+    valid_recorded_process_failure_signature,
+)
 
 
 REPORT_SCHEMA_VERSION = 1
@@ -30,7 +38,9 @@ def validate_report_document(report: object) -> Dict[str, object]:
         )
     if "repomin_version" in report:
         _require_text(report, "repomin_version", non_empty=True)
-    _require_text(report, "command", non_empty=True)
+    command = _require_text(report, "command", non_empty=True)
+    if "\x00" in command:
+        raise ReportValidationError("command must not contain NUL")
     _require_optional_text(report, "failure_match")
     _require_int(report, "baseline_exit_code")
     _require_int(report, "final_exit_code")
@@ -38,6 +48,22 @@ def validate_report_document(report: object) -> Dict[str, object]:
         section = _require_object(report, name)
         _require_nonnegative_int(section, "files", name)
         _require_nonnegative_int(section, "bytes", name)
+    output = report["output"]
+    assert isinstance(output, dict)
+    tree_sha256 = output.get("tree_sha256")
+    if tree_sha256 is not None and (
+        not isinstance(tree_sha256, str) or _SHA256.fullmatch(tree_sha256) is None
+    ):
+        raise ReportValidationError("output.tree_sha256 must be SHA-256")
+    tree_policy = output.get("tree_fingerprint_policy")
+    if tree_sha256 is None and tree_policy is not None:
+        raise ReportValidationError(
+            "output.tree_fingerprint_policy requires tree_sha256"
+        )
+    if tree_sha256 is not None and tree_policy != TREE_FINGERPRINT_POLICY:
+        raise ReportValidationError(
+            "output.tree_fingerprint_policy is unsupported or missing"
+        )
     for name in ("attempts", "accepted_mutations", "cache_hits"):
         _require_nonnegative_int(report, name)
 
@@ -46,6 +72,16 @@ def validate_report_document(report: object) -> Dict[str, object]:
     if backend not in {"host", "docker"}:
         raise ReportValidationError("execution.backend must be host or docker")
     _require_positive_int(execution, "jobs", "execution")
+    if "timeout_seconds" in execution:
+        timeout = _require_nonnegative_number(
+            execution, "timeout_seconds", "execution"
+        )
+        if timeout <= 0.0:
+            raise ReportValidationError("execution.timeout_seconds must be positive")
+    _validate_execution_limits(execution)
+
+    _validate_failure_spec(report)
+    _validate_failure_signatures(report)
 
     phases = _require_object(report, "phase_statistics")
     coverage = phases.get("coverage")
@@ -381,6 +417,10 @@ def validate_report_document(report: object) -> Dict[str, object]:
         raise ReportValidationError(
             "certified holdout must include artifact_fingerprint"
         )
+    if fingerprint is not None and tree_sha256 is not None and fingerprint != tree_sha256:
+        raise ReportValidationError(
+            "output tree fingerprint differs from holdout artifact fingerprint"
+        )
     return report
 
 
@@ -399,14 +439,23 @@ def validate_report_file(
     assert isinstance(report, dict)
     holdout = report["holdout_certification"]
     assert isinstance(holdout, dict)
-    expected = holdout.get("artifact_fingerprint")
-    if payload is not None and expected is not None:
+    output = report["output"]
+    assert isinstance(output, dict)
+    expected = output.get("tree_sha256") or holdout.get("artifact_fingerprint")
+    if payload is not None:
+        if payload.is_symlink():
+            raise ReportValidationError("payload root must not be a symbolic link")
         if not payload.is_dir():
             raise ReportValidationError("payload is not a directory: %s" % payload)
         actual = _tree_digest(payload, set())
-        if actual != expected:
+        if expected is not None and actual != expected:
             raise ReportValidationError(
                 "payload fingerprint differs from report: %s" % payload
+            )
+        files, size = measure_tree(payload)
+        if files != output["files"] or size != output["bytes"]:
+            raise ReportValidationError(
+                "payload size differs from report: %s" % payload
             )
     return report
 
@@ -416,6 +465,162 @@ def _require_object(parent: Dict[str, object], name: str) -> Dict[str, object]:
     if not isinstance(value, dict):
         raise ReportValidationError("%s must be an object" % name)
     return value
+
+
+def _validate_failure_spec(report: Dict[str, object]) -> None:
+    value = report.get("failure_spec")
+    if value is None:
+        return
+    if not isinstance(value, dict):
+        raise ReportValidationError("failure_spec must be an object")
+    if value.get("schema_version") != 1:
+        raise ReportValidationError("failure_spec.schema_version must be 1")
+    for name in ("match", "exit_code"):
+        if name not in value:
+            raise ReportValidationError("failure_spec.%s is required" % name)
+    match = value["match"]
+    if match is not None and not isinstance(match, str):
+        raise ReportValidationError("failure_spec.match must be text or null")
+    if match != report.get("failure_match"):
+        raise ReportValidationError(
+            "failure_spec.match does not equal failure_match"
+        )
+    exit_code = value["exit_code"]
+    if exit_code is not None and (
+        isinstance(exit_code, bool) or not isinstance(exit_code, int)
+    ):
+        raise ReportValidationError(
+            "failure_spec.exit_code must be an integer or null"
+        )
+    modes = []
+    for name in ("java_exception", "python_exception", "process_failure"):
+        enabled = value.get(name)
+        if not isinstance(enabled, bool):
+            raise ReportValidationError("failure_spec.%s must be boolean" % name)
+        modes.append(enabled)
+    if sum(modes) > 1:
+        raise ReportValidationError(
+            "failure_spec enables more than one failure signature mode"
+        )
+    if value.get("process_failure") and exit_code is not None:
+        raise ReportValidationError(
+            "failure_spec process_failure cannot include exit_code"
+        )
+    if match is None and exit_code is None and not value.get("process_failure"):
+        raise ReportValidationError("failure_spec does not define a failure oracle")
+
+
+def _validate_failure_signatures(report: Dict[str, object]) -> None:
+    signature_names = (
+        "java_exception_signature",
+        "python_exception_signature",
+        "process_failure_signature",
+    )
+    present = []
+    for name in signature_names:
+        if name not in report:
+            continue
+        if report[name] is None:
+            raise ReportValidationError("%s must be an object" % name)
+        present.append(name)
+    if len(present) > 1:
+        raise ReportValidationError("report contains multiple failure signatures")
+    for name in ("java_exception_signature", "python_exception_signature"):
+        value = report.get(name)
+        if value is None:
+            continue
+        if not isinstance(value, dict):
+            raise ReportValidationError("%s must be an object" % name)
+        class_name = value.get("class")
+        message = value.get("message")
+        frames = value.get("frames")
+        if not isinstance(class_name, str) or not class_name:
+            raise ReportValidationError("%s.class must be non-empty text" % name)
+        if not isinstance(message, str):
+            raise ReportValidationError("%s.message must be text" % name)
+        if (
+            not isinstance(frames, list)
+            or not frames
+            or any(not isinstance(frame, str) or not frame for frame in frames)
+        ):
+            raise ReportValidationError(
+                "%s.frames must be a non-empty text array" % name
+            )
+    process = report.get("process_failure_signature")
+    if process is not None:
+        if not isinstance(process, dict):
+            raise ReportValidationError(
+                "process_failure_signature must be an object"
+            )
+        kind = process.get("kind")
+        code = process.get("code")
+        if (
+            not isinstance(kind, str)
+            or isinstance(code, bool)
+            or not isinstance(code, int)
+        ):
+            raise ReportValidationError("process_failure_signature is invalid")
+        if not valid_recorded_process_failure_signature(
+            ProcessFailureSignature(kind, code)
+        ):
+            raise ReportValidationError("process_failure_signature is invalid")
+        name = process.get("name")
+        if name is not None and not isinstance(name, str):
+            raise ReportValidationError(
+                "process_failure_signature.name must be text or null"
+            )
+
+    spec = report.get("failure_spec")
+    if not isinstance(spec, dict):
+        return
+    expected = None
+    if spec["java_exception"]:
+        expected = "java_exception_signature"
+    elif spec["python_exception"]:
+        expected = "python_exception_signature"
+    elif spec["process_failure"]:
+        expected = "process_failure_signature"
+    if expected is not None and present != [expected]:
+        raise ReportValidationError(
+            "failure_spec signature mode does not match recorded signature"
+        )
+    if expected is None and present:
+        raise ReportValidationError(
+            "failure_spec disables the recorded failure signature"
+        )
+
+
+def _validate_execution_limits(execution: Dict[str, object]) -> None:
+    """Validate serialized Docker limits before a replay can construct a runner."""
+    if "limits" not in execution:
+        return
+    limits = execution["limits"]
+    if not isinstance(limits, dict):
+        raise ReportValidationError("execution.limits must be an object")
+
+    if "cpus" in limits:
+        cpus = _require_nonnegative_number(limits, "cpus", "execution.limits")
+        if cpus <= 0.0:
+            raise ReportValidationError("execution.limits.cpus must be positive")
+
+    integer_limits = (
+        ("memory_bytes", 6 * 1024 * 1024, "at least 6 MiB"),
+        ("pids", 1, "positive"),
+        ("tmpfs_bytes", 1, "positive"),
+        ("workspace_bytes", 1, "positive"),
+    )
+    for name, minimum, description in integer_limits:
+        if name not in limits:
+            continue
+        value = limits[name]
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ReportValidationError(
+                "execution.limits.%s must be an integer" % name
+            )
+        if value < minimum:
+            raise ReportValidationError(
+                "execution.limits.%s must be %s" % (name, description)
+            )
 
 
 def _require_text(
@@ -520,9 +725,18 @@ def write_report(
     command: str,
     match: Optional[str],
     metadata: Path,
+    *,
+    failure_spec: Optional[FailureSpec] = None,
+    timeout_seconds: Optional[float] = None,
 ) -> None:
     metadata.mkdir()
-    report = _build_report(result, command, match)
+    report = _build_report(
+        result,
+        command,
+        match,
+        failure_spec=failure_spec,
+        timeout_seconds=timeout_seconds,
+    )
     (metadata / "report.json").write_text(
         json.dumps(report, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
@@ -538,6 +752,9 @@ def verify_existing_report(
     command: str,
     match: Optional[str],
     metadata: Path,
+    *,
+    failure_spec: Optional[FailureSpec] = None,
+    timeout_seconds: Optional[float] = None,
 ) -> None:
     """Verify a sidecar left by a crash without overwriting user-visible files."""
     if not metadata.is_dir():
@@ -558,10 +775,33 @@ def verify_existing_report(
     except (OSError, UnicodeError, ValueError) as exc:
         raise ValueError("metadata output could not be verified: %s" % metadata) from exc
 
-    expected_report = _build_report(result, command, match)
+    expected_report = _build_report(
+        result,
+        command,
+        match,
+        failure_spec=failure_spec,
+        timeout_seconds=timeout_seconds,
+    )
     # Reports produced before version provenance was added remain resumable.
     if isinstance(actual_report, dict) and "repomin_version" not in actual_report:
         expected_report.pop("repomin_version", None)
+    if isinstance(actual_report, dict) and "failure_spec" not in actual_report:
+        expected_report.pop("failure_spec", None)
+    if isinstance(actual_report, dict):
+        actual_execution = actual_report.get("execution")
+        expected_execution = expected_report.get("execution")
+        if (
+            isinstance(actual_execution, dict)
+            and isinstance(expected_execution, dict)
+            and "timeout_seconds" not in actual_execution
+        ):
+            expected_execution.pop("timeout_seconds", None)
+        actual_output = actual_report.get("output")
+        expected_output = expected_report.get("output")
+        if isinstance(actual_output, dict) and isinstance(expected_output, dict):
+            if "tree_sha256" not in actual_output:
+                expected_output.pop("tree_sha256", None)
+                expected_output.pop("tree_fingerprint_policy", None)
     # A report may have been fully written immediately before the process
     # crashed. Restoration itself changes only these provenance booleans.
     for report in (actual_report, expected_report):
@@ -587,9 +827,17 @@ def _build_report(
     result: ReductionResult,
     command: str,
     match: Optional[str],
+    *,
+    failure_spec: Optional[FailureSpec] = None,
+    timeout_seconds: Optional[float] = None,
 ) -> Dict[str, object]:
     stats = result.stats
     holdout = result.holdout_certification
+    output_fingerprint = (
+        _tree_digest(result.output, set())
+        if result.output.is_dir() and not result.output.is_symlink()
+        else None
+    )
     report: Dict[str, object] = {
         "schema_version": 1,
         "repomin_version": __version__,
@@ -774,8 +1022,24 @@ def _build_report(
             for event in stats.events
         ],
     }
+    output = report["output"]
+    assert isinstance(output, dict)
+    if output_fingerprint is not None:
+        output["tree_sha256"] = output_fingerprint
+        output["tree_fingerprint_policy"] = TREE_FINGERPRINT_POLICY
+    if failure_spec is not None:
+        report["failure_spec"] = {
+            "schema_version": 1,
+            "match": failure_spec.match,
+            "exit_code": failure_spec.exit_code,
+            "java_exception": failure_spec.java_exception,
+            "python_exception": failure_spec.python_exception,
+            "process_failure": failure_spec.process_failure,
+        }
     execution = report["execution"]
     assert isinstance(execution, dict)
+    if timeout_seconds is not None:
+        execution["timeout_seconds"] = timeout_seconds
     if stats.container_image is not None:
         execution["image"] = stats.container_image
     if stats.container_image_id is not None:

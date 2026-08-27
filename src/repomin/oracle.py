@@ -26,6 +26,7 @@ from repomin.signature import (
     extract_process_failure,
     extract_run_java_exception,
     extract_run_python_exception,
+    valid_recorded_process_failure_signature,
     valid_process_failure_signature,
 )
 
@@ -473,6 +474,34 @@ class FailureOracle:
     @property
     def process_failure_signature(self) -> Optional[ProcessFailureSignature]:
         return self._process_failure_signature
+
+    def pin_failure_signature(self, signature: object) -> None:
+        """Pin a previously recorded signature without learning a replacement."""
+        if self.baseline_runs or any(
+            value is not None
+            for value in (
+                self._java_exception_signature,
+                self._python_exception_signature,
+                self._process_failure_signature,
+            )
+        ):
+            raise OracleError("failure signature can only be pinned on a fresh oracle")
+        if self.spec.java_exception:
+            if not isinstance(signature, JavaExceptionSignature):
+                raise OracleError("recorded Java exception signature is invalid")
+            self._java_exception_signature = signature
+        elif self.spec.python_exception:
+            if not isinstance(signature, PythonExceptionSignature):
+                raise OracleError("recorded Python exception signature is invalid")
+            self._python_exception_signature = signature
+        elif self.spec.process_failure:
+            if not isinstance(signature, ProcessFailureSignature) or not (
+                valid_recorded_process_failure_signature(signature)
+            ):
+                raise OracleError("recorded process failure signature is invalid")
+            self._process_failure_signature = signature
+        else:
+            raise OracleError("failure signature mode is not enabled")
 
     def _accepts_basic(self, result: RunResult) -> bool:
         if result.timed_out or result.resource_exhausted:

@@ -8,6 +8,13 @@ Only run ReproMin on repositories and reproduction commands you trust. Review
 scripts, Maven plugins, test fixtures, and build configuration before running
 them. Use a disposable container or virtual machine for untrusted reports.
 
+`repomin report replay` executes the unsigned command embedded in a report.
+`--yes` acknowledges that execution but does not make the report trusted.
+Replay uses disposable payload copies and omits raw command output and
+environment values from its evidence, but a host command still retains the
+invoking user's access. Review both the report and payload first; use a
+disposable virtual machine for artifacts from an untrusted source.
+
 The Docker backend narrows access with these defaults:
 
 - no container network;

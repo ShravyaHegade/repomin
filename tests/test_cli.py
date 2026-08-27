@@ -263,6 +263,7 @@ class CliTest(unittest.TestCase):
                 self.assertIn("doctor", stdout.getvalue())
                 self.assertIn("report", stdout.getvalue())
                 self.assertIn("validate", stdout.getvalue())
+                self.assertIn("replay", stdout.getvalue())
                 for option in sorted(parser_options):
                     with self.subTest(shell=shell, option=option):
                         expected = (
@@ -1735,7 +1736,10 @@ class CliTest(unittest.TestCase):
                 {path.name for path in metadata.iterdir()},
             )
             report = _report(output)
-            self.assertEqual({"files": 0, "bytes": 0}, report["output"])
+            self.assertEqual(0, report["output"]["files"])
+            self.assertEqual(0, report["output"]["bytes"])
+            self.assertEqual("tree-sha256-v2", report["output"]["tree_fingerprint_policy"])
+            self.assertEqual(64, len(report["output"]["tree_sha256"]))
             certification = report["holdout_certification"]
             self.assertEqual("certified", certification["status"])
             self.assertEqual(

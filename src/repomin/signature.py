@@ -143,6 +143,19 @@ def valid_process_failure_signature(signature: ProcessFailureSignature) -> bool:
     return normalized == signature
 
 
+def valid_recorded_process_failure_signature(
+    signature: ProcessFailureSignature,
+) -> bool:
+    """Validate a portable report signature without consulting the host OS."""
+    if signature.kind == "posix_signal":
+        return 1 <= signature.code <= 255
+    if signature.kind == "windows_status":
+        return 0x80000000 <= signature.code <= 0xFFFFFFFF
+    if signature.kind == "exit_code":
+        return 1 <= signature.code < 0x80000000
+    return False
+
+
 def extract_run_java_exception(
     result: RunResult,
     pattern: Optional[Pattern[str]] = None,

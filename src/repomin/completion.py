@@ -15,7 +15,27 @@ _repomin() {
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     if [[ "${COMP_WORDS[1]}" == "report" ]]; then
         if (( COMP_CWORD == 2 )); then
-            COMPREPLY=( $(compgen -W "validate --help" -- "$cur") )
+            COMPREPLY=( $(compgen -W "validate replay --help" -- "$cur") )
+            return 0
+        fi
+        if [[ "${COMP_WORDS[2]}" == "replay" ]]; then
+            options="--help --payload --runs --timeout --env --backend --docker-image --docker-network --exit-code --yes --json"
+            value_options="--payload --runs --timeout --env --backend --docker-image --docker-network --exit-code"
+            case "$prev" in
+                --backend) COMPREPLY=( $(compgen -W "recorded host docker" -- "$cur") ); return 0 ;;
+                --docker-network) COMPREPLY=( $(compgen -W "none bridge host" -- "$cur") ); return 0 ;;
+            esac
+            if [[ " $value_options " == *" $prev "* ]]; then
+                if [[ "$prev" == "--payload" ]]; then
+                    COMPREPLY=( $(compgen -f -- "$cur") )
+                fi
+                return 0
+            fi
+            if [[ "$cur" == -* ]]; then
+                COMPREPLY=( $(compgen -W "$options" -- "$cur") )
+            else
+                COMPREPLY=( $(compgen -f -- "$cur") )
+            fi
             return 0
         fi
         if [[ "${COMP_WORDS[2]}" == "validate" ]]; then
@@ -89,8 +109,22 @@ _repomin() {
                 '--help[show report validation help]' \
                 '--payload[exported payload directory]:directory:_files -/' \
                 '--json[print a machine-readable result]'
+        elif [[ "$words[3]" == "replay" ]]; then
+            _arguments -s \
+                '1:report:_files' \
+                '--help[show report replay help]' \
+                '--payload[exported payload directory]:directory:_files -/' \
+                '--runs[number of fresh replay copies]:count:' \
+                '--timeout[seconds per replay run]:seconds:' \
+                '*--env[recorded environment variable]:NAME=VALUE:' \
+                '--backend[execution backend]:backend:(recorded host docker)' \
+                '--docker-image[local Docker image]:image:' \
+                '--docker-network[Docker network policy]:network:(none bridge host)' \
+                '--exit-code[legacy exit-code contract]:code:' \
+                '--yes[acknowledge execution of the report command]' \
+                '--json[print machine-readable replay evidence]'
         else
-            _arguments -s '1:report command:(validate)' '--help[show report help]'
+            _arguments -s '1:report command:(validate replay)' '--help[show report help]'
         fi
         return
     fi
@@ -186,9 +220,19 @@ _repomin "$@"
 _FISH = r'''# Fish completion for repomin.
 complete -c repomin -f -n '__fish_use_subcommand' -a 'completion doctor report' -d 'command'
 complete -c repomin -f -n '__fish_seen_subcommand_from completion' -a 'bash zsh fish' -d 'shell'
-complete -c repomin -f -n '__fish_seen_subcommand_from report' -a validate -d 'validate a report'
+complete -c repomin -f -n '__fish_seen_subcommand_from report' -a 'validate replay' -d 'report command'
 complete -c repomin -f -n '__fish_seen_subcommand_from report; and __fish_seen_subcommand_from validate' -l payload -r -a '(__fish_complete_directories)' -d 'exported payload directory'
 complete -c repomin -f -n '__fish_seen_subcommand_from report; and __fish_seen_subcommand_from validate' -l json -d 'print a machine-readable result'
+complete -c repomin -f -n '__fish_seen_subcommand_from report; and __fish_seen_subcommand_from replay' -l payload -r -a '(__fish_complete_directories)' -d 'exported payload directory'
+complete -c repomin -f -n '__fish_seen_subcommand_from report; and __fish_seen_subcommand_from replay' -l runs -r -d 'fresh replay copies'
+complete -c repomin -f -n '__fish_seen_subcommand_from report; and __fish_seen_subcommand_from replay' -l timeout -r -d 'seconds per replay run'
+complete -c repomin -f -n '__fish_seen_subcommand_from report; and __fish_seen_subcommand_from replay' -l env -r -d 'recorded environment variable'
+complete -c repomin -f -n '__fish_seen_subcommand_from report; and __fish_seen_subcommand_from replay' -l backend -r -a 'recorded host docker' -d 'execution backend'
+complete -c repomin -f -n '__fish_seen_subcommand_from report; and __fish_seen_subcommand_from replay' -l docker-image -r -d 'local Docker image'
+complete -c repomin -f -n '__fish_seen_subcommand_from report; and __fish_seen_subcommand_from replay' -l docker-network -r -a 'none bridge host' -d 'Docker network policy'
+complete -c repomin -f -n '__fish_seen_subcommand_from report; and __fish_seen_subcommand_from replay' -l exit-code -r -d 'legacy exit-code contract'
+complete -c repomin -f -n '__fish_seen_subcommand_from report; and __fish_seen_subcommand_from replay' -l yes -d 'acknowledge report command execution'
+complete -c repomin -f -n '__fish_seen_subcommand_from report; and __fish_seen_subcommand_from replay' -l json -d 'print machine-readable replay evidence'
 complete -c repomin -f -n '__fish_seen_subcommand_from doctor' -l json -d 'print a machine-readable result'
 
 set -l boolean_options version help resume no-cache gitignore gitignore-recursive java-exception python-exception process-failure verbose
@@ -261,8 +305,12 @@ Register-ArgumentCompleter -Native -CommandName repomin -ScriptBlock {
         '--semantic-endpoint', '--semantic-model', '--semantic-timeout',
         '--java-classpath', '--verbose'
     )
-    $reportOptions = @('validate', '--help')
+    $reportOptions = @('validate', 'replay', '--help')
     $reportValidateOptions = @('--help', '--payload', '--json')
+    $reportReplayOptions = @(
+        '--help', '--payload', '--runs', '--timeout', '--env', '--backend',
+        '--docker-image', '--docker-network', '--exit-code', '--yes', '--json'
+    )
     $reportPathOptions = @('--payload')
     $valueOptions = @(
         '--command', '--match', '--exit-code', '--output', '--session', '--timeout',
@@ -298,12 +346,33 @@ Register-ArgumentCompleter -Native -CommandName repomin -ScriptBlock {
     $reportMode = $elements | Where-Object { $_.Extent.Text -eq 'report' }
     if ($reportMode) {
         $validateMode = $elements | Where-Object { $_.Extent.Text -eq 'validate' }
-        if (-not $validateMode) {
+        $replayMode = $elements | Where-Object { $_.Extent.Text -eq 'replay' }
+        if (-not $validateMode -and -not $replayMode) {
             $reportOptions |
                 Where-Object { $_ -like "$wordToComplete*" } |
                 ForEach-Object {
                     [System.Management.Automation.CompletionResult]::new(
                         $_, $_, 'Command', $_
+                    )
+                }
+            return
+        }
+        if ($replayMode -and $previous -eq '--backend') {
+            @('recorded', 'host', 'docker') |
+                Where-Object { $_ -like "$wordToComplete*" } |
+                ForEach-Object {
+                    [System.Management.Automation.CompletionResult]::new(
+                        $_, $_, 'ParameterValue', $_
+                    )
+                }
+            return
+        }
+        if ($replayMode -and $previous -eq '--docker-network') {
+            @('none', 'bridge', 'host') |
+                Where-Object { $_ -like "$wordToComplete*" } |
+                ForEach-Object {
+                    [System.Management.Automation.CompletionResult]::new(
+                        $_, $_, 'ParameterValue', $_
                     )
                 }
             return
@@ -326,7 +395,12 @@ Register-ArgumentCompleter -Native -CommandName repomin -ScriptBlock {
                 }
             return
         }
-        $reportValidateOptions |
+        $activeReportOptions = if ($replayMode) {
+            $reportReplayOptions
+        } else {
+            $reportValidateOptions
+        }
+        $activeReportOptions |
             Where-Object { $_ -like "$wordToComplete*" } |
             ForEach-Object {
                 [System.Management.Automation.CompletionResult]::new(
