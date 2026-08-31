@@ -65,11 +65,9 @@ repomin report replay /tmp/project-repro.repomin/report.json \
   --yes
 ```
 
-The replay and transport-fingerprint pilot is currently available from the
-reviewed `main` commit described in the [real-failure pilot guide](docs/REAL_FAILURE_PILOT.md).
-The `v0.1.0.dev4` release asset predates those checks, and the runtime version
-has not changed, so `repomin --version` alone is not enough to identify the
-pilot build.
+The replay and transport-fingerprint workflow is included in the current
+`v0.1.0.dev5` pre-release. The [real-failure pilot guide](docs/REAL_FAILURE_PILOT.md)
+describes the report and privacy boundaries.
 
 中文用户可以先阅读[中文快速开始](docs/QUICKSTART.zh-CN.md)，其中包含一个
 可直接运行的最小缩减示例、安全边界和报告说明。
@@ -84,7 +82,7 @@ command does not modify your system Python:
 python3 -m venv .venv
 . .venv/bin/activate                         # macOS/Linux
 python -m pip install --upgrade pip
-REPOMIN_VERSION=0.1.0.dev4
+REPOMIN_VERSION=0.1.0.dev5
 python -m pip install \
   "https://github.com/fly1d/repomin/releases/download/v${REPOMIN_VERSION}/repomin-${REPOMIN_VERSION}-py3-none-any.whl"
 python -m repomin --version
@@ -97,7 +95,7 @@ wheel with PowerShell's environment-variable syntax:
 ```powershell
 py -3 -m venv .venv
 .venv\Scripts\Activate.ps1
-$env:REPOMIN_VERSION = "0.1.0.dev4"
+$env:REPOMIN_VERSION = "0.1.0.dev5"
 python -m pip install "https://github.com/fly1d/repomin/releases/download/v${env:REPOMIN_VERSION}/repomin-${env:REPOMIN_VERSION}-py3-none-any.whl"
 python -m repomin --version
 ```
@@ -106,7 +104,7 @@ If PowerShell blocks `Activate.ps1` because of its execution policy, leave the
 environment unactivated and replace `python` above with
 `.venv\Scripts\python.exe`.
 
-The [release page](https://github.com/fly1d/repomin/releases/tag/v0.1.0.dev4)
+The [release page](https://github.com/fly1d/repomin/releases/tag/v0.1.0.dev5)
 includes SHA-256 checksums for the wheel and source archive; verify the
 downloaded asset there when supply-chain verification is required. The wheel is
 preferred for a quick install because it needs no build step.
@@ -114,7 +112,7 @@ preferred for a quick install because it needs no build step.
 To install the source archive instead, keep the same `REPOMIN_VERSION` value:
 
 ```sh
-REPOMIN_VERSION=0.1.0.dev4
+REPOMIN_VERSION=0.1.0.dev5
 python -m pip install \
   "https://github.com/fly1d/repomin/releases/download/v${REPOMIN_VERSION}/repomin-${REPOMIN_VERSION}.tar.gz"
 ```
@@ -141,7 +139,7 @@ python -m repomin --version
 The plain `python -m pip install -e .` form is also sufficient when you only
 need the package and do not plan to run the lint, coverage, build, or release
 checks. A version-matched source archive is available on the same [release
-page](https://github.com/fly1d/repomin/releases/tag/v0.1.0.dev4) for users who
+page](https://github.com/fly1d/repomin/releases/tag/v0.1.0.dev5) for users who
 need to inspect or build from source.
 
 ### Shell completion

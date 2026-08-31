@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+No unreleased changes yet.
+
+## [0.1.0.dev5] - 2026-08-31
+
 ### Added
 
 - A real-failure pilot guide with a sanitization checklist, an audited-main
@@ -74,6 +78,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `repomin report --help` now lists both report subcommands and points to their
   detailed option help, and Fish completion now includes PowerShell as a
   supported shell.
+- Top-level reduction filesystem failures now return an actionable exit code
+  instead of leaking an unhandled traceback.
 
 ## [0.1.0.dev4] - 2026-08-27
 

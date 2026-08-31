@@ -11,21 +11,20 @@ PyPI。建议先使用虚拟环境，避免修改系统 Python：
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install --upgrade pip
-REPOMIN_VERSION=0.1.0.dev4
+REPOMIN_VERSION=0.1.0.dev5
 python -m pip install \
   "https://github.com/fly1d/repomin/releases/download/v${REPOMIN_VERSION}/repomin-${REPOMIN_VERSION}-py3-none-any.whl"
 python -m repomin --version
 ```
 
-当前版本应显示 `repomin 0.1.0.dev4`。发布页同时提供 wheel 和源码归档，以及对应的
+当前版本应显示 `repomin 0.1.0.dev5`。发布页同时提供 wheel 和源码归档，以及对应的
 SHA-256 校验值；需要供应链校验时，请先核对
-[发布页](https://github.com/fly1d/repomin/releases/tag/v0.1.0.dev4)再安装。wheel 不需要
+[发布页](https://github.com/fly1d/repomin/releases/tag/v0.1.0.dev5)再安装。wheel 不需要
 本地构建，首次使用更快。
 
-注意：本页后面的 `report replay` 和传输 fingerprint pilot 功能尚未包含在
-`v0.1.0.dev4` 发布包中。参与 pilot 时，请按[真实失败 pilot 指南](REAL_FAILURE_PILOT.md)
-从审核过的 `main` 提交安装，并记录 Git commit；当前运行时版本号仍可能显示
-`0.1.0.dev4`，单看版本号无法区分两者。
+本页后面的 `report replay` 和传输 fingerprint 功能已包含在 `v0.1.0.dev5` 发布包中。
+参与 pilot 前仍请阅读[真实失败 pilot 指南](REAL_FAILURE_PILOT.md)，并按其中的隐私和
+安全边界检查报告与 payload。
 
 如果你正在开发 ReproMin，也可以在仓库根目录创建虚拟环境后运行
 `python -m pip install -e ".[dev]"`，这样会同时安装测试、检查和发布工具；只需要

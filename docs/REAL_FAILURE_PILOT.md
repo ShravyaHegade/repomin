@@ -6,27 +6,22 @@ in practice; a complete private repository is not required.
 
 ## Install the pilot build
 
-The replay and transport-fingerprint workflow described below is currently a
-pilot feature on `main`. The `v0.1.0.dev4` release wheel predates
-`repomin report replay` and the content-fingerprint fallback, so install the
-reviewed commit in an isolated environment:
+The replay and transport-fingerprint workflow described below is included in
+the `v0.1.0.dev5` pre-release. Install that wheel in an isolated environment
+when you want a reproducible versioned pilot run:
 
 ```sh
-git clone https://github.com/fly1d/repomin.git repomin-pilot
-cd repomin-pilot
-git checkout --detach a7861a68d5b3a8904629903cd99fc989e1ca4054
 python3 -m venv .venv
 . .venv/bin/activate
-python -m pip install -e .
+REPOMIN_VERSION=0.1.0.dev5
+python -m pip install \
+  "https://github.com/fly1d/repomin/releases/download/v${REPOMIN_VERSION}/repomin-${REPOMIN_VERSION}-py3-none-any.whl"
 python -m repomin --version
-git rev-parse HEAD
 ```
 
-The runtime version intentionally remains `0.1.0.dev4`, so the version string
-alone does not identify this build. Include the full Git commit printed by
-`git rev-parse HEAD` in the pilot summary. Users who only capture and validate
-a report can use the release installation in the [README](../README.md), but
-replay requires the reviewed `main` commit above.
+Record the release version (and the Git SHA when installing from a source
+checkout) in the pilot summary. Users who only capture and validate a report
+can use the same release installation described in the [README](../README.md).
 
 ## Before sharing
 

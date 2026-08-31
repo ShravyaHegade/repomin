@@ -1356,6 +1356,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         FileExistsError,
         JavaReducerError,
         NotADirectoryError,
+        OSError,
         OracleError,
         RunnerError,
         SessionError,

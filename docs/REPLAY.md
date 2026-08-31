@@ -9,11 +9,9 @@ found.
 The command stored in a report is executable input. Review the report and the
 payload before acknowledging execution with `--yes`.
 
-This command is currently part of the real-failure pilot on `main`; it is not
-included in the `v0.1.0.dev4` release asset. Install the reviewed commit and
-record its Git SHA as described in the [pilot guide](REAL_FAILURE_PILOT.md).
-Because the runtime version remains `0.1.0.dev4`, `repomin --version` alone
-cannot distinguish the pilot build from that older release.
+This command is included in the `v0.1.0.dev5` pre-release. For a pilot report,
+record the installed version and (when installing from source) the Git SHA as
+described in the [pilot guide](REAL_FAILURE_PILOT.md).
 
 ## Minimal replay
 

@@ -232,6 +232,41 @@ class CliTest(unittest.TestCase):
             )
             self.assertIn("check --keep docs/LICENSE", stderr.getvalue())
 
+    def test_filesystem_errors_return_actionable_cli_error(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            source.mkdir()
+            (source / "reproduce.py").write_text(SCRIPT, encoding="utf-8")
+            (source / "required.txt").write_text("keep\n", encoding="utf-8")
+            output = root / "output"
+            stderr = io.StringIO()
+
+            with patch(
+                "repomin.cli.write_report",
+                side_effect=OSError("simulated disk full"),
+            ):
+                with contextlib.redirect_stderr(stderr):
+                    exit_code = main(
+                        [
+                            str(source),
+                            "--command",
+                            "python3 reproduce.py",
+                            "--match",
+                            "ORIGINAL_FAILURE",
+                            "--adapter",
+                            "none",
+                            "--source-reducer",
+                            "none",
+                            "--output",
+                            str(output),
+                        ]
+                    )
+
+            self.assertEqual(2, exit_code)
+            self.assertIn("repomin: simulated disk full", stderr.getvalue())
+            self.assertNotIn("Traceback", stderr.getvalue())
+
     def test_shell_completion_scripts_are_available(self) -> None:
         parser_options = {
             option
