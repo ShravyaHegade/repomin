@@ -4,6 +4,7 @@ include SUPPORT.md
 include CONTRIBUTORS.md
 include action.yml
 include scripts/check_contribution.py
+include scripts/check_docs.py
 recursive-include docs *.md
 include tests/test_*.py
 

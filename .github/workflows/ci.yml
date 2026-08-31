@@ -159,7 +159,7 @@ jobs:
           java-version: "11"
       - name: Install build tools
         run: python -m pip install build coverage ruff twine
-      - name: Run contributor preflight (static checks)
+      - name: Run contributor preflight (static and documentation checks)
         run: python scripts/check_contribution.py --skip-tests
       - name: Report test coverage
         run: |

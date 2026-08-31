@@ -29,18 +29,27 @@ class ContributorCheckTest(unittest.TestCase):
             )
 
         self.assertEqual(
-            ["Ruff lint", "Byte-compile", "Unit tests"],
+            ["Documentation", "Ruff lint", "Byte-compile", "Unit tests"],
             [check.name for check in checks],
         )
         self.assertEqual(
-            ("python", "-m", "ruff", "check", "src", "tests", "scripts"),
+            (
+                "python",
+                str(_TEST_ROOT / "scripts" / "check_docs.py"),
+                "--root",
+                str(_TEST_ROOT),
+            ),
             checks[0].command,
         )
         self.assertEqual(
-            ("python", "-m", "compileall", "-q", "src", "tests", "scripts"),
+            ("python", "-m", "ruff", "check", "src", "tests", "scripts"),
             checks[1].command,
         )
-        self.assertIn(str(_TEST_ROOT / "src"), checks[2].env["PYTHONPATH"])
+        self.assertEqual(
+            ("python", "-m", "compileall", "-q", "src", "tests", "scripts"),
+            checks[2].command,
+        )
+        self.assertIn(str(_TEST_ROOT / "src"), checks[3].env["PYTHONPATH"])
 
     def test_optional_flags_change_only_requested_checks(self) -> None:
         checks = _MODULE.build_checks(
@@ -52,7 +61,7 @@ class ContributorCheckTest(unittest.TestCase):
         )
 
         self.assertEqual(
-            ["Byte-compile", "Offline benchmarks"],
+            ["Documentation", "Byte-compile", "Offline benchmarks"],
             [c.name for c in checks],
         )
         self.assertEqual(
@@ -60,7 +69,7 @@ class ContributorCheckTest(unittest.TestCase):
                 "python",
                 str(_TEST_ROOT / "benchmarks" / "run_offline.py"),
             ),
-            checks[1].command,
+            checks[2].command,
         )
 
     def test_ruff_executable_is_used_when_module_is_not_installed(self) -> None:

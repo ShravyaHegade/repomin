@@ -58,6 +58,18 @@ def build_checks(
     """Build the deterministic command list for a contributor preflight."""
 
     checks: List[Check] = []
+    resolved_root = root.resolve()
+    checks.append(
+        Check(
+            "Documentation",
+            (
+                python,
+                str(resolved_root / "scripts" / "check_docs.py"),
+                "--root",
+                str(resolved_root),
+            ),
+        )
+    )
     if not skip_lint:
         checks.append(
             Check(

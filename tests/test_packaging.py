@@ -75,6 +75,7 @@ class PackagingContractTests(unittest.TestCase):
         manifest = (ROOT / "MANIFEST.in").read_text(encoding="utf-8")
         for relative in (
             "scripts/check_contribution.py",
+            "scripts/check_docs.py",
             "benchmarks/python-requirements/README.md",
             "benchmarks/python-requirements/requirements.txt",
             "benchmarks/python-requirements/requirements/runtime.txt",

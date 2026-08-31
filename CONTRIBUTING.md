@@ -34,12 +34,20 @@ From the repository root, run the standard local checks with one command:
 python3 scripts/check_contribution.py
 ```
 
-The preflight runs Ruff, byte-compilation, and the complete unit-test suite
-without changing tracked source files; its Python and Ruff caches are cleaned
-up from a temporary directory after each run. Install Ruff first when it is not
-already available (`python3 -m pip install ruff`). For a documentation-only change,
-`--skip-lint` is available; explain skipped checks in the pull request. When a
-change adds or updates an offline fixture, include the benchmark regression too:
+The preflight checks Markdown files for valid UTF-8, LF line endings, and paired
+fenced code blocks, then runs Ruff, byte-compilation, and the complete unit-test
+suite without changing tracked source files. Its Python and Ruff caches are
+cleaned up from a temporary directory after each run. The documentation check
+can also be run by itself:
+
+```sh
+python3 scripts/check_docs.py
+```
+
+Install Ruff first when it is not already available
+(`python3 -m pip install ruff`). For a documentation-only change, `--skip-lint`
+is available; explain skipped checks in the pull request. When a change adds or
+updates an offline fixture, include the benchmark regression too:
 
 ```sh
 python3 scripts/check_contribution.py --with-benchmarks
