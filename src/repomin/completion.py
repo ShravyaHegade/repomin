@@ -219,7 +219,7 @@ _repomin "$@"
 
 _FISH = r'''# Fish completion for repomin.
 complete -c repomin -f -n '__fish_use_subcommand' -a 'completion doctor report' -d 'command'
-complete -c repomin -f -n '__fish_seen_subcommand_from completion' -a 'bash zsh fish' -d 'shell'
+complete -c repomin -f -n '__fish_seen_subcommand_from completion' -a 'bash zsh fish powershell' -d 'shell'
 complete -c repomin -f -n '__fish_seen_subcommand_from report' -a 'validate replay' -d 'report command'
 complete -c repomin -f -n '__fish_seen_subcommand_from report; and __fish_seen_subcommand_from validate' -l payload -r -a '(__fish_complete_directories)' -d 'exported payload directory'
 complete -c repomin -f -n '__fish_seen_subcommand_from report; and __fish_seen_subcommand_from validate' -l json -d 'print a machine-readable result'

@@ -301,6 +301,24 @@ class CliTest(unittest.TestCase):
             stdout.getvalue(),
         )
 
+    def test_report_parent_help_lists_subcommands_and_detailed_help(self) -> None:
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            exit_code = main(["report", "--help"])
+        self.assertEqual(0, exit_code)
+        help_text = stdout.getvalue()
+        self.assertIn("usage: repomin report {validate,replay}", help_text)
+        self.assertIn("validate  validate report structure", help_text)
+        self.assertIn("replay    run the recorded failure", help_text)
+        self.assertIn("repomin report validate --help", help_text)
+
+    def test_fish_completion_lists_every_supported_shell(self) -> None:
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            exit_code = main(["completion", "fish"])
+        self.assertEqual(0, exit_code)
+        self.assertIn("-a 'bash zsh fish powershell'", stdout.getvalue())
+
     def test_match_is_required_without_process_failure_mode(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "source"

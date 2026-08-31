@@ -1525,7 +1525,14 @@ def _report_command(argv: Sequence[str]) -> int:
     """Handle report inspection commands without changing reduction parsing."""
     if not argv or argv[0] in {"-h", "--help"}:
         print("usage: repomin report {validate,replay} ...")
-        print("validate report evidence or replay its failure in fresh copies")
+        print("inspect report evidence or replay its failure in fresh copies")
+        print()
+        print("commands:")
+        print("  validate  validate report structure and optional payload evidence")
+        print("  replay    run the recorded failure in fresh payload copies")
+        print()
+        print("use `repomin report validate --help` or `repomin report replay --help`")
+        print("for command-specific options")
         return 0
     if argv[0] == "validate":
         return _report_validate_command(argv[1:])

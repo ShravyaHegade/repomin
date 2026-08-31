@@ -62,6 +62,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The contributor and support entry points now include a structured real-failure
   issue template and a short claim-to-PR workflow.
 
+### Fixed
+
+- `repomin report --help` now lists both report subcommands and points to their
+  detailed option help, and Fish completion now includes PowerShell as a
+  supported shell.
+
 ## [0.1.0.dev4] - 2026-08-27
 
 ### Added
