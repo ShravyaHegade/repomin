@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-No unreleased changes yet.
+### Fixed
+
+- The CI artifact download step now uses the Node 24-compatible
+  `actions/download-artifact@v8` release.
 
 ## [0.1.0.dev5] - 2026-08-31
 

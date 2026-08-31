@@ -127,7 +127,7 @@ jobs:
           [[ "$ACTUAL_OUTPUT_BYTES" =~ ^[0-9]+$ ]]
           [[ "$ACTUAL_HOLDOUT" == "not_requested" ]]
       - name: Download and validate action artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: action-smoke
           path: action-smoke-download
