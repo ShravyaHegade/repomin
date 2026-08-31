@@ -9,10 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- A real-failure pilot guide with a sanitization checklist, report validation
-  workflow, and copyable feedback template.
+- A real-failure pilot guide with a sanitization checklist, an audited-main
+  installation note for replay and content-fingerprint pilots, a report
+  validation workflow, and a copyable feedback template.
 - A dependency-free contributor preflight script and one-command validation
-  guidance for local linting, compilation, tests, and optional benchmarks.
+  guidance for Markdown encoding/fence checks, local linting, compilation,
+  tests, and optional benchmarks.
+- Repository text attributes now keep source, fixtures, configuration, and
+  documentation on LF line endings across contributor platforms.
 - A network-free Python requirements-chain benchmark covering nested includes,
   constraints, hash-pinned dependencies, and CI-only requirements.
 - Offline benchmark JSON summaries and comparison output now record the

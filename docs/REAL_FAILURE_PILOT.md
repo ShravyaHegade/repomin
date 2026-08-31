@@ -4,6 +4,30 @@ Use this guide to share a sanitized ReproMin run from a real CI or dependency
 failure. The goal is to learn which defaults, adapters, and report fields help
 in practice; a complete private repository is not required.
 
+## Install the pilot build
+
+The replay and transport-fingerprint workflow described below is currently a
+pilot feature on `main`. The `v0.1.0.dev4` release wheel predates
+`repomin report replay` and the content-fingerprint fallback, so install the
+reviewed commit in an isolated environment:
+
+```sh
+git clone https://github.com/fly1d/repomin.git repomin-pilot
+cd repomin-pilot
+git checkout --detach a7861a68d5b3a8904629903cd99fc989e1ca4054
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -e .
+python -m repomin --version
+git rev-parse HEAD
+```
+
+The runtime version intentionally remains `0.1.0.dev4`, so the version string
+alone does not identify this build. Include the full Git commit printed by
+`git rev-parse HEAD` in the pilot summary. Users who only capture and validate
+a report can use the release installation in the [README](../README.md), but
+replay requires the reviewed `main` commit above.
+
 ## Before sharing
 
 - Remove credentials, tokens, private URLs, customer data, and proprietary
@@ -55,6 +79,24 @@ payload for secrets before sharing.
 
 The sidecar contains `report.json` and a human-readable `REPOMIN.md`. Review
 both files and the minimized payload for secrets before posting anything.
+
+## Replay a pilot artifact
+
+After reviewing the command and payload, run fresh-copy replay from the same
+pilot environment to report whether the configured oracle still matches:
+
+```sh
+repomin report replay \
+  /tmp/repomin-pilot-result.repomin/report.json \
+  --payload /tmp/repomin-pilot-result \
+  --runs 2 \
+  --yes \
+  --json
+```
+
+Replay is a current-environment observation, not a correctness, root-cause, or
+production-reliability claim. Do not share raw command output or environment
+values; review the report and payload for secrets first.
 
 ## Share the result
 

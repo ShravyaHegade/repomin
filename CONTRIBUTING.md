@@ -36,9 +36,11 @@ python3 scripts/check_contribution.py
 
 The preflight checks Markdown files for valid UTF-8, LF line endings, and paired
 fenced code blocks, then runs Ruff, byte-compilation, and the complete unit-test
-suite without changing tracked source files. Its Python and Ruff caches are
-cleaned up from a temporary directory after each run. The documentation check
-can also be run by itself:
+suite without changing tracked source files. The repository's `.gitattributes`
+also asks Git to check out common text files with LF endings; the explicit check
+catches files imported with a different encoding or line ending. Its Python and
+Ruff caches are cleaned up from a temporary directory after each run. The
+documentation check can also be run by itself:
 
 ```sh
 python3 scripts/check_docs.py

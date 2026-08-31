@@ -65,6 +65,12 @@ repomin report replay /tmp/project-repro.repomin/report.json \
   --yes
 ```
 
+The replay and transport-fingerprint pilot is currently available from the
+reviewed `main` commit described in the [real-failure pilot guide](docs/REAL_FAILURE_PILOT.md).
+The `v0.1.0.dev4` release asset predates those checks, and the runtime version
+has not changed, so `repomin --version` alone is not enough to identify the
+pilot build.
+
 中文用户可以先阅读[中文快速开始](docs/QUICKSTART.zh-CN.md)，其中包含一个
 可直接运行的最小缩减示例、安全边界和报告说明。
 

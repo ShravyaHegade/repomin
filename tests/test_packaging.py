@@ -74,6 +74,7 @@ class PackagingContractTests(unittest.TestCase):
     def test_requirements_fixture_is_included_in_source_manifest(self) -> None:
         manifest = (ROOT / "MANIFEST.in").read_text(encoding="utf-8")
         for relative in (
+            ".gitattributes",
             "scripts/check_contribution.py",
             "scripts/check_docs.py",
             "benchmarks/python-requirements/README.md",
@@ -84,6 +85,11 @@ class PackagingContractTests(unittest.TestCase):
             "benchmarks/python-requirements/reproduce.py",
         ):
             self.assertIn("include " + relative, manifest)
+
+    def test_common_text_files_are_pinned_to_lf(self) -> None:
+        attributes = (ROOT / ".gitattributes").read_text(encoding="utf-8")
+        for pattern in ("*.md", "*.py", "*.yml", "*.txt"):
+            self.assertIn(pattern + " text eol=lf", attributes)
 
 
 if __name__ == "__main__":
