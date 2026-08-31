@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import errno
 import hashlib
+import inspect
 import json
 import math
 import os
@@ -79,14 +80,27 @@ class IgnoreSet(set):
         names: Iterable[str] = (),
         paths: Iterable[str] = (),
         gitignore: Optional[GitignoreMatcher] = None,
+        keep_paths: Iterable[str] = (),
     ) -> None:
         super().__init__(names)
         self.paths = tuple(paths)
         self._path_parts = tuple(PurePosixPath(path).parts for path in self.paths)
         self.gitignore = gitignore
+        self.keep_paths = tuple(keep_paths)
+        self._keep_path_parts = tuple(
+            PurePosixPath(path).parts for path in self.keep_paths
+        )
 
-    def matches(self, relative: Path) -> bool:
+    def matches(self, relative: Path, is_directory: Optional[bool] = None) -> bool:
         parts = relative.parts
+        # An explicit keep is a stronger user-level declaration than an
+        # exclusion rule.  Preserve the target and every ancestor needed to
+        # reach it so initial copies and ignored-entry cleanup cannot erase it.
+        if any(
+            parts[: len(kept)] == kept or kept[: len(parts)] == parts
+            for kept in self._keep_path_parts
+        ):
+            return False
         if any(part in self for part in parts):
             return True
         if any(
@@ -95,7 +109,15 @@ class IgnoreSet(set):
         ):
             return True
         if self.gitignore is not None:
-            return self.gitignore.matches(PurePosixPath(relative.as_posix()))
+            posix = PurePosixPath(relative.as_posix())
+            matched = self.gitignore.matches(posix, is_directory=is_directory)
+            if (
+                matched
+                and is_directory is True
+                and self.gitignore.may_reinclude_descendant(posix)
+            ):
+                return False
+            return matched
         return False
 
 _MUTATION_BLOCKING_FILESYSTEM_FLAG_NAMES = (
@@ -262,7 +284,10 @@ class ReductionSession:
         self.progress = progress or (lambda message: None)
         self.ignore_paths = tuple(sorted(set(ignore_paths or ())))
         self.keep_paths = tuple(sorted(set(keep_paths or ())))
-        self.gitignore_files = tuple(sorted(set(gitignore_files or ())))
+        # Rule-file order is meaningful because later negations can override
+        # earlier entries.  Preserve the loader's deterministic order while
+        # collapsing duplicate labels.
+        self.gitignore_files = tuple(dict.fromkeys(gitignore_files or ()))
         self.gitignore_recursive = bool(gitignore_recursive)
         if max_attempts is not None and (
             isinstance(max_attempts, bool) or max_attempts < 1
@@ -282,6 +307,7 @@ class ReductionSession:
             DEFAULT_IGNORES,
             self.ignore_paths,
             gitignore_matcher,
+            self.keep_paths,
         )
         self.ignores.update(ignores or ())
         self.stats.ignored_names = sorted(self.ignores)
@@ -390,7 +416,9 @@ class ReductionSession:
         """Return whether the file reducer must preserve ``relative``."""
         parts = relative.parts
         return any(
-            parts[: len(kept)] == kept
+            # Keep the ancestor directories needed to reach a kept file, as
+            # well as the kept path itself and descendants of kept directories.
+            parts[: len(kept)] == kept or kept[: len(parts)] == parts
             for kept in self._keep_path_parts
         )
 
@@ -1696,8 +1724,13 @@ def _copy_repository(source: Path, destination: Path, ignores: Set[str]) -> None
         directory_path = Path(directory).resolve()
         ignored = set()
         for name in names:
-            relative = (directory_path / name).relative_to(source_root)
-            if _is_ignored(relative, ignores):
+            candidate = directory_path / name
+            relative = candidate.relative_to(source_root)
+            try:
+                is_directory = stat.S_ISDIR(candidate.lstat().st_mode)
+            except OSError:
+                is_directory = None
+            if _is_ignored(relative, ignores, is_directory=is_directory):
                 ignored.add(name)
         return ignored
 
@@ -1794,10 +1827,42 @@ def _rename_directory_no_replace(source: Path, destination: Path) -> None:
         raise OSError(error, os.strerror(error), str(destination))
 
 
-def _is_ignored(relative: Path, ignores: Set[str]) -> bool:
+def _is_ignored(
+    relative: Path,
+    ignores: Set[str],
+    is_directory: Optional[bool] = None,
+) -> bool:
     matcher = getattr(ignores, "matches", None)
     if callable(matcher):
-        return bool(matcher(relative))
+        if is_directory is None:
+            # The legacy protocol only accepted ``matches(path)``; retaining
+            # that call shape also avoids probing it with an unsupported
+            # keyword when no entry type is available.
+            return bool(matcher(relative))
+        try:
+            parameters = inspect.signature(matcher).parameters.values()
+        except (TypeError, ValueError):
+            parameters = None
+        if parameters is not None and not any(
+            parameter.name == "is_directory"
+            or parameter.kind == inspect.Parameter.VAR_KEYWORD
+            for parameter in parameters
+        ):
+            # Legacy matcher protocol: do not probe it with a keyword that it
+            # cannot accept, and therefore do not run it twice on failure.
+            return bool(matcher(relative))
+        try:
+            return bool(matcher(relative, is_directory=is_directory))
+        except TypeError as keyword_error:
+            # A callable without an inspectable signature may still be a
+            # legacy matcher. Retry only in that unknown-signature case; for a
+            # known new-style matcher, preserve an implementation TypeError.
+            if parameters is not None:
+                raise
+            try:
+                return bool(matcher(relative))
+            except TypeError:
+                raise keyword_error
     return any(part in ignores for part in relative.parts)
 
 
@@ -1826,7 +1891,12 @@ def _validate_repository_entries(root: Path, ignores: Set[str]) -> None:
             ) from exc
         for entry in entries:
             path = Path(entry.path)
-            if _is_ignored(path.relative_to(root), ignores):
+            relative = path.relative_to(root)
+            try:
+                is_directory = stat.S_ISDIR(entry.stat(follow_symlinks=False).st_mode)
+            except OSError:
+                is_directory = None
+            if _is_ignored(relative, ignores, is_directory=is_directory):
                 continue
             try:
                 status = entry.stat(follow_symlinks=False)
@@ -1837,7 +1907,7 @@ def _validate_repository_entries(root: Path, ignores: Set[str]) -> None:
             mode = status.st_mode
             _reject_mutation_blocking_filesystem_flags(
                 status,
-                path.relative_to(root),
+                relative,
             )
             if stat.S_ISLNK(mode):
                 try:
@@ -2280,11 +2350,24 @@ def _session_identities_match(saved: object, current: object) -> bool:
 
 
 def _remove_ignored(root: Path, ignores: Set[str]) -> None:
+    def ignored_path(path: Path) -> bool:
+        try:
+            status = path.lstat()
+        except FileNotFoundError:
+            # A command may have removed an ignored generated entry between
+            # the directory walk and this cleanup pass.
+            return False
+        return _is_ignored(
+            path.relative_to(root),
+            ignores,
+            is_directory=stat.S_ISDIR(status.st_mode),
+        )
+
     candidates = sorted(
         (
             path
             for path in root.rglob("*")
-            if _is_ignored(path.relative_to(root), ignores)
+            if ignored_path(path)
         ),
         key=lambda path: len(path.parts),
         reverse=True,
@@ -3210,7 +3293,11 @@ def _tree_file_bytes(root: Path, ignores: Set[str]) -> int:
     size = 0
     for path in root.rglob("*"):
         relative = path.relative_to(root)
-        if _is_ignored(relative, ignores):
+        if _is_ignored(
+            relative,
+            ignores,
+            is_directory=stat.S_ISDIR(path.lstat().st_mode),
+        ):
             continue
         if path.is_file() and not path.is_symlink():
             try:
@@ -3298,7 +3385,11 @@ def _compute_tree_digest(
             .encode("utf-8", errors="surrogateescape"),
         )
         for path in root.rglob("*")
-        if not _is_ignored(path.relative_to(root), ignored)
+        if not _is_ignored(
+            path.relative_to(root),
+            ignored,
+            is_directory=stat.S_ISDIR(path.lstat().st_mode),
+        )
     ]
     paths.sort(key=lambda item: item[1])
     entries = [(root, b"")] + paths
@@ -3392,7 +3483,11 @@ def _compute_tree_content_digest(
             .encode("utf-8", errors="surrogateescape"),
         )
         for path in root.rglob("*")
-        if not _is_ignored(path.relative_to(root), ignored)
+        if not _is_ignored(
+            path.relative_to(root),
+            ignored,
+            is_directory=stat.S_ISDIR(path.lstat().st_mode),
+        )
     ]
     paths.sort(key=lambda item: item[1])
     entries = [(root, b"")] + paths

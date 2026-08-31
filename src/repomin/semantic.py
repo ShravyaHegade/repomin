@@ -247,7 +247,7 @@ def collect_text_files(
         if not path.is_file() or path.is_symlink():
             continue
         relative = path.relative_to(root)
-        if session.ignores.matches(relative):
+        if session.ignores.matches(relative, is_directory=False):
             continue
         try:
             data = path.read_bytes()

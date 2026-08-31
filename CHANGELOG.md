@@ -11,6 +11,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The CI artifact download step now uses the Node 24-compatible
   `actions/download-artifact@v8` release.
+- `repomin doctor` now accepts the same root, explicit, and recursive
+  `.gitignore` inputs as a reduction, so adapter detection, source sizing, and
+  baseline checks reflect the effective tree that will actually be reduced.
+- Gitignore directory rules now distinguish a directory from a same-named
+  regular file, while preserving descendants and valid negation paths during
+  copies, fingerprints, and Doctor scans; standalone `**` segments also allow
+  zero or more directory levels.
+- Recursive gitignore discovery now applies each nested rule file before
+  descending further, so ignored subtrees do not contribute deeper rule files.
+- Explicit `--keep` paths now survive matching gitignore rules, including the
+  parent directories needed to reach a kept file, throughout copy, reduction,
+  cleanup, and fingerprint operations.
 
 ## [0.1.0.dev5] - 2026-08-31
 

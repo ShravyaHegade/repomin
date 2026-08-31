@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
 from repomin.execution import CommandRunner, DockerRunner, RunnerError
+from repomin.gitignore import load_gitignore
 from repomin.model import FailureSpec
 from repomin.oracle import FailureOracle, OracleError
 from repomin.session import (
@@ -78,13 +79,13 @@ def _repository_files(root: Path, ignores: Optional[IgnoreSet] = None) -> List[P
         kept_directories = []
         for name in sorted(dirnames):
             relative = (directory_path / name).relative_to(root)
-            if not active_ignores.matches(relative):
+            if not active_ignores.matches(relative, is_directory=True):
                 kept_directories.append(name)
         dirnames[:] = kept_directories
         for name in sorted(filenames):
             path = directory_path / name
             relative = path.relative_to(root)
-            if active_ignores.matches(relative):
+            if active_ignores.matches(relative, is_directory=False):
                 continue
             mode = path.lstat().st_mode
             if stat.S_ISREG(mode):
@@ -241,6 +242,9 @@ def run_doctor(
     output: Optional[str] = None,
     ignore_names: Sequence[str] = (),
     ignore_paths: Sequence[str] = (),
+    gitignore: bool = False,
+    gitignore_files: Sequence[str] = (),
+    gitignore_recursive: bool = False,
 ) -> Tuple[bool, Dict[str, object]]:
     """Run static checks and, when requested, a fresh-copy baseline check."""
     source = source.expanduser().resolve()
@@ -252,6 +256,9 @@ def run_doctor(
         "adapters": {},
         "source_reducers": {},
         "baseline": {"status": "not_run"},
+        "gitignore_files": [],
+        "gitignore_sha256": None,
+        "gitignore_recursive": bool(gitignore_recursive),
     }
     if adapter not in ("auto", "none") + _ADAPTER_NAMES:
         _check(checks, "adapter", "fail", "unsupported adapter: %s" % adapter)
@@ -268,7 +275,33 @@ def run_doctor(
         _check(checks, "source", "fail", "source is not a directory: %s" % source)
         result["ok"] = False
         return False, result
-    ignores = IgnoreSet(DEFAULT_IGNORES, sorted(set(ignore_paths)))
+    try:
+        (
+            gitignore_matcher,
+            loaded_gitignore_files,
+            gitignore_sha256,
+            loaded_gitignore_recursive,
+        ) = load_gitignore(
+            source,
+            gitignore,
+            gitignore_files,
+            recursive=gitignore_recursive,
+            ignore_names=ignore_names,
+            ignore_paths=ignore_paths,
+            default_ignores=DEFAULT_IGNORES,
+        )
+    except (OSError, ValueError) as exc:
+        _check(checks, "gitignore", "fail", str(exc))
+        result["ok"] = False
+        return False, result
+    result["gitignore_files"] = list(loaded_gitignore_files)
+    result["gitignore_sha256"] = gitignore_sha256
+    result["gitignore_recursive"] = loaded_gitignore_recursive
+    ignores = IgnoreSet(
+        DEFAULT_IGNORES,
+        sorted(set(ignore_paths)),
+        gitignore_matcher,
+    )
     ignores.update(ignore_names)
     try:
         _validate_repository_entries(source, ignores)

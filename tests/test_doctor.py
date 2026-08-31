@@ -97,6 +97,87 @@ class DoctorTest(unittest.TestCase):
         self.assertEqual(3, result["source_files"])
         self.assertIn("generated", result["ignored_names"])
 
+    def test_doctor_applies_root_gitignore_before_detection(self) -> None:
+        source = self._source()
+        generated = source / "generated"
+        generated.mkdir()
+        (generated / "package.json").write_text(
+            '{"name": "ignored"}\n', encoding="utf-8"
+        )
+        (source / ".gitignore").write_text("/generated/\n", encoding="utf-8")
+
+        ok, result = run_doctor(source, gitignore=True)
+
+        self.assertTrue(ok)
+        self.assertFalse(result["adapters"]["node"]["detected"])
+        self.assertEqual([".gitignore"], result["gitignore_files"])
+        self.assertRegex(result["gitignore_sha256"], r"^[0-9a-f]{64}$")
+        self.assertFalse(result["gitignore_recursive"])
+        self.assertEqual(4, result["source_files"])
+
+    def test_doctor_keeps_same_named_file_for_directory_only_rule(self) -> None:
+        source = self._source()
+        (source / "generated").write_text("ordinary file\n", encoding="utf-8")
+        (source / ".gitignore").write_text("generated/\n", encoding="utf-8")
+
+        ok, result = run_doctor(source, gitignore=True)
+
+        self.assertTrue(ok)
+        self.assertEqual(5, result["source_files"])
+
+    def test_doctor_applies_nested_gitignore_to_baseline_and_reports_rules(self) -> None:
+        source = self._source()
+        services = source / "services"
+        private = services / "private"
+        private.mkdir(parents=True)
+        (source / ".gitignore").write_text("\n", encoding="utf-8")
+        (services / ".gitignore").write_text("/private/\n", encoding="utf-8")
+        (private / "package.json").write_text(
+            '{"name": "ignored"}\n', encoding="utf-8"
+        )
+        command = _python_command("reproduce.py")
+
+        ok, result = run_doctor(
+            source,
+            command=command,
+            match="ORIGINAL_FAILURE",
+            exit_code=7,
+            gitignore=True,
+            gitignore_recursive=True,
+        )
+
+        self.assertTrue(ok)
+        self.assertEqual("pass", result["baseline"]["status"])
+        self.assertEqual([".gitignore", "services/.gitignore"], result["gitignore_files"])
+        self.assertTrue(result["gitignore_recursive"])
+        self.assertRegex(result["gitignore_sha256"], r"^[0-9a-f]{64}$")
+        self.assertNotIn("services/private/package.json", result["adapters"]["node"]["files"])
+
+    def test_cli_accepts_doctor_gitignore_options(self) -> None:
+        source = self._source()
+        custom = source / "custom.ignore"
+        custom.write_text("generated/\n", encoding="utf-8")
+        generated = source / "generated"
+        generated.mkdir()
+        (generated / "package.json").write_text("{}\n", encoding="utf-8")
+        output = io.StringIO()
+
+        with contextlib.redirect_stdout(output):
+            exit_code = main(
+                [
+                    "doctor",
+                    str(source),
+                    "--gitignore-file",
+                    "custom.ignore",
+                    "--json",
+                ]
+            )
+
+        self.assertEqual(0, exit_code)
+        result = json.loads(output.getvalue())
+        self.assertEqual(["custom.ignore"], result["gitignore_files"])
+        self.assertFalse(result["adapters"]["node"]["detected"])
+
     def test_doctor_detection_matches_adapter_and_source_patterns(self) -> None:
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)

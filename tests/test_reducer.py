@@ -219,6 +219,38 @@ raise SystemExit(2)
             finally:
                 session.close()
 
+    def test_file_reducer_preserves_ancestors_of_nested_kept_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source"
+            generated = source / "generated"
+            generated.mkdir(parents=True)
+            (source / "reproduce.py").write_text(REPRODUCE_SCRIPT, encoding="utf-8")
+            (source / "needed.txt").write_text("required\n", encoding="utf-8")
+            (generated / "keep.txt").write_text("keep\n", encoding="utf-8")
+            (generated / "unused.txt").write_text("unused\n", encoding="utf-8")
+
+            runner = CommandRunner("python3 reproduce.py", timeout_seconds=5)
+            oracle = FailureOracle(runner, FailureSpec("ORIGINAL_FAILURE"))
+            stats = ReductionStats(source_files=4, source_bytes=0)
+            session = ReductionSession(
+                source,
+                oracle,
+                stats,
+                keep_paths=["generated/keep.txt"],
+            )
+            try:
+                session.verify_baseline(1)
+                FileReducer(session).reduce()
+
+                self.assertTrue((session.current / "generated").is_dir())
+                self.assertTrue((session.current / "generated" / "keep.txt").exists())
+                self.assertFalse((session.current / "generated" / "unused.txt").exists())
+                self.assertTrue(session.keeps(Path("generated")))
+                self.assertTrue(session.keeps(Path("generated/keep.txt")))
+                self.assertFalse(session.keeps(Path("other")))
+            finally:
+                session.close()
+
 
 if __name__ == "__main__":
     unittest.main()

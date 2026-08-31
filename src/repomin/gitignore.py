@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import hashlib
+import os
 import re
 from dataclasses import dataclass
-from pathlib import PurePosixPath
-from typing import List, Sequence, Tuple
+from pathlib import Path, PurePosixPath
+from typing import Iterable, List, Optional, Sequence, Tuple
 
 
 class GitignoreError(ValueError):
@@ -36,6 +38,7 @@ class GitignoreRule:
 
     pattern: str
     regex: "re.Pattern[str]"
+    exact_regex: "re.Pattern[str]"
     directory_only: bool
     anchored: bool
     negated: bool
@@ -45,7 +48,46 @@ class GitignoreRule:
 
 
 def _translate_glob(pattern: str) -> str:
-    """Translate a gitignore glob into a non-capturing regex fragment."""
+    """Translate a gitignore glob into a non-capturing regex fragment.
+
+    A standalone ``**`` path segment has Git's special zero-or-more-directory
+    meaning.  Handling complete segments here keeps ``foo/**/bar`` compatible
+    with both ``foo/bar`` and deeper paths; ordinary ``**`` embedded in a
+    segment remains the broad wildcard supported by the documented subset.
+    """
+    segments = pattern.split("/")
+    if any(segment == "**" for segment in segments):
+        return _translate_glob_segments(segments)
+    return _translate_glob_segment(pattern)
+
+
+def _translate_glob_segments(segments: Sequence[str]) -> str:
+    """Translate path segments while collapsing standalone ``**`` groups."""
+    result: List[str] = []
+    after_double_star = False
+    last_index = len(segments) - 1
+    for index, segment in enumerate(segments):
+        if segment == "**" and index < last_index:
+            if index > 0 and not after_double_star:
+                result.append("/")
+            result.append("(?:[^/]+/)*")
+            after_double_star = True
+            continue
+        if segment == "**":
+            if index > 0 and not after_double_star:
+                result.append("/")
+            result.append(".*")
+            after_double_star = False
+            continue
+        if index > 0 and not after_double_star:
+            result.append("/")
+        result.append(_translate_glob_segment(segment))
+        after_double_star = False
+    return "".join(result)
+
+
+def _translate_glob_segment(pattern: str) -> str:
+    """Translate one path segment into a regex fragment."""
     result: List[str] = []
     index = 0
     length = len(pattern)
@@ -55,11 +97,11 @@ def _translate_glob(pattern: str) -> str:
             end = index
             while end < length and pattern[end] == "*":
                 end += 1
-            count = end - index
-            if count >= 2:
-                result.append(".*")
-            else:
-                result.append("[^/]*")
+            # Cross-directory ``**`` is handled only when it is a complete
+            # path segment by ``_translate_glob_segments``.  Inside a segment
+            # (for example ``a**b``), consecutive stars have the same
+            # one-segment behavior as ``*`` and must not consume ``/``.
+            result.append("[^/]*")
             index = end
             continue
         if char == "?":
@@ -134,27 +176,21 @@ def _parse_pattern(
     # separator-free pattern instead matches the basename at every depth.
     if contains_separator:
         anchored = True
+    # Keep a capture for the optional descendant portion.  Directory-only
+    # rules must not match a regular file at the exact rule path, while the
+    # same rule still applies to entries below an ignored directory.
+    descendant_suffix = r"(?P<descendant>/.*)?"
+    fragment = _translate_glob(pattern)
     if anchored:
-        fragment = _translate_glob(pattern)
-        if directory_only:
-            regex = re.compile(
-                r"^%s(?:/.*)?$" % fragment
-            )
-        else:
-            regex = re.compile(r"^%s$" % fragment)
+        exact_regex = re.compile(r"^%s$" % fragment)
+        regex = re.compile(r"^%s%s$" % (fragment, descendant_suffix))
     else:
-        fragment = _translate_glob(pattern)
-        if directory_only:
-            regex = re.compile(
-                r"^(?:.*/)?%s(?:/.*)?$" % fragment
-            )
-        else:
-            regex = re.compile(
-                r"^(?:.*/)?%s$" % fragment
-            )
+        exact_regex = re.compile(r"^(?:.*/)?%s$" % fragment)
+        regex = re.compile(r"^(?:.*/)?%s%s$" % (fragment, descendant_suffix))
     return GitignoreRule(
         pattern=pattern,
         regex=regex,
+        exact_regex=exact_regex,
         directory_only=directory_only,
         anchored=anchored,
         negated=negated,
@@ -211,7 +247,18 @@ class GitignoreMatcher:
             rules.extend(cls.from_text(text, source, base).rules)
         return cls(rules)
 
-    def matches(self, relative: PurePosixPath) -> bool:
+    def matches(
+        self,
+        relative: PurePosixPath,
+        is_directory: Optional[bool] = None,
+    ) -> bool:
+        """Return whether *relative* is excluded by the ordered rules.
+
+        ``is_directory`` is optional for callers that only have a path.  When
+        it is explicitly ``False``, a trailing-slash rule does not match the
+        regular file at the exact rule path; descendants still match because
+        their parent directory is the ignored target.
+        """
         path = relative.as_posix()
         matched = False
         for rule in self.rules:
@@ -221,12 +268,117 @@ class GitignoreMatcher:
                 scoped_path = "/".join(relative.parts[len(rule.base) :])
             else:
                 scoped_path = path
+            rule_match = rule.regex.match(scoped_path)
+            if rule_match is None:
+                continue
+            if rule.directory_only and is_directory is False:
+                # A trailing-slash rule applies to a file only when one of
+                # its proper ancestors is the ignored directory.  Checking
+                # the exact target regex separately is important for patterns
+                # whose wildcard can itself consume descendant segments
+                # (for example ``foo/**/``).
+                if not self._has_matching_directory_ancestor(relative, rule):
+                    continue
             if rule.negated:
-                if rule.regex.match(scoped_path):
-                    matched = False
-            elif rule.regex.match(scoped_path):
+                matched = False
+            else:
                 matched = True
         return matched
+
+    @staticmethod
+    def _has_matching_directory_ancestor(
+        relative: PurePosixPath,
+        rule: GitignoreRule,
+    ) -> bool:
+        parts = relative.parts
+        for length in range(1, len(parts)):
+            ancestor = parts[:length]
+            if rule.base:
+                if ancestor[: len(rule.base)] != rule.base:
+                    continue
+                scoped = "/".join(ancestor[len(rule.base) :])
+            else:
+                scoped = "/".join(ancestor)
+            if rule.exact_regex.match(scoped) is not None:
+                return True
+        return False
+
+    def may_reinclude_descendant(self, relative: PurePosixPath) -> bool:
+        """Return whether a negated rule could affect a child of *relative*.
+
+        Directory walkers may prune an ignored directory, but doing so would
+        hide a later negated rule such as ``!generated/keep.txt``.  This check
+        is deliberately conservative: a possible glob overlap keeps the
+        directory walkable, while the ordinary :meth:`matches` result still
+        decides which individual entries are ignored.
+        """
+        path_parts = relative.parts
+        for rule in self.rules:
+            if not rule.negated:
+                continue
+            if rule.base:
+                if path_parts[: len(rule.base)] != rule.base:
+                    continue
+                scoped_parts = path_parts[len(rule.base) :]
+            else:
+                scoped_parts = path_parts
+
+            pattern_parts = tuple(part for part in rule.pattern.split("/") if part)
+            if not scoped_parts:
+                return True
+            if not pattern_parts:
+                continue
+
+            # ``**`` can consume an arbitrary number of path segments.  A
+            # simple length comparison would incorrectly prune a directory
+            # that is already deeper than the number of literal pattern
+            # segments (for example ``!foo/**/keep.txt``).  Check only the
+            # prefix before the first double-star segment and conservatively
+            # keep walking whenever that prefix can still overlap.
+            double_star_index = next(
+                (
+                    index
+                    for index, segment in enumerate(pattern_parts)
+                    if "**" in segment
+                ),
+                None,
+            )
+            if double_star_index is not None:
+                if not rule.anchored:
+                    return True
+                prefix_parts = pattern_parts[:double_star_index]
+                if len(scoped_parts) < len(prefix_parts):
+                    actual_prefix = scoped_parts
+                else:
+                    actual_prefix = scoped_parts[: len(prefix_parts)]
+                if all(
+                    _glob_segments_overlap(pattern, actual)
+                    for pattern, actual in zip(prefix_parts, actual_prefix)
+                ):
+                    return True
+                continue
+
+            # A separator-free, unanchored rule can match a basename at any
+            # depth below this directory.  An anchored one only applies when
+            # the current path begins with the same (possibly globbed) name.
+            if len(pattern_parts) == 1:
+                if not rule.anchored:
+                    return True
+                if _glob_segments_overlap(pattern_parts[0], scoped_parts[0]):
+                    return True
+                continue
+
+            # Patterns containing a separator are anchored at the rule file's
+            # directory.  They can affect a descendant while the current path
+            # is a compatible prefix of the pattern.
+            if len(scoped_parts) >= len(pattern_parts):
+                continue
+            if all(
+                _glob_segments_overlap(pattern, actual)
+                for pattern, actual in zip(pattern_parts, scoped_parts)
+            ):
+                return True
+        return False
 
     def serialized_rules(self) -> List[dict]:
         return [
@@ -241,3 +393,174 @@ class GitignoreMatcher:
             }
             for rule in self.rules
         ]
+
+
+def _glob_segments_overlap(pattern: str, actual: str) -> bool:
+    """Return whether two one-path-segment patterns may overlap."""
+    if any(character in pattern for character in "*?["):
+        return True
+    return pattern == actual
+
+
+def load_gitignore(
+    source: Path,
+    enabled: bool,
+    files: Sequence[str],
+    recursive: bool = False,
+    ignore_names: Sequence[str] = (),
+    ignore_paths: Sequence[str] = (),
+    default_ignores: Iterable[str] = (),
+) -> Tuple[Optional[GitignoreMatcher], Sequence[str], Optional[str], bool]:
+    """Load the configured gitignore files for a repository.
+
+    The loader is shared by the reduction command and ``repomin doctor`` so
+    both commands use identical rule ordering, nested-file discovery, and
+    fingerprint metadata.  ``default_ignores`` supplies the reducer's
+    built-in exclusions while walking for nested rule files; it is intentionally
+    an argument here to avoid a dependency cycle with :mod:`repomin.session`.
+    """
+    if not enabled and not files and not recursive:
+        return None, (), None, False
+
+    source_root = Path(source).expanduser().resolve()
+    entries: List[Tuple[str, Tuple[str, ...], str]] = []
+    base_entries: List[Tuple[str, Tuple[str, ...], str]] = []
+    seen: set[str] = set()
+
+    def add_path(path: Path) -> None:
+        resolved = path.expanduser().resolve()
+        key = str(resolved)
+        if key in seen:
+            return
+        seen.add(key)
+        try:
+            relative = resolved.relative_to(source_root)
+        except ValueError:
+            relative = None
+        label = relative.as_posix() if relative is not None else str(resolved)
+        base = relative.parent.parts if relative is not None else ()
+        if not resolved.is_file():
+            raise ValueError("gitignore file is not a regular file: %s" % resolved)
+        try:
+            data = resolved.read_bytes()
+        except OSError as exc:
+            raise ValueError("gitignore file could not be read: %s" % resolved) from exc
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ValueError("gitignore file is not UTF-8: %s" % resolved) from exc
+        entry = (label, base, text)
+        entries.append(entry)
+        base_entries.append(entry)
+
+    if enabled or recursive:
+        add_path(source_root / ".gitignore")
+    for value in files:
+        path = Path(value).expanduser()
+        if not path.is_absolute():
+            path = source_root / path
+        add_path(path)
+
+    base_matcher = None
+    if base_entries:
+        try:
+            base_matcher = GitignoreMatcher.from_scoped_files(base_entries)
+        except GitignoreError as exc:
+            raise ValueError(str(exc)) from exc
+
+    if recursive:
+        for label, text in _collect_nested_gitignore(
+            source_root,
+            ignore_names,
+            ignore_paths,
+            default_ignores,
+            base_matcher,
+            loaded_labels=(entry[0] for entry in base_entries),
+        ):
+            add_path(source_root / label)
+
+    if not entries:
+        return None, (), None, recursive
+
+    try:
+        matcher = GitignoreMatcher.from_scoped_files(entries)
+    except GitignoreError as exc:
+        raise ValueError(str(exc)) from exc
+
+    digest = hashlib.sha256()
+    for label, _base, text in entries:
+        digest.update(label.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(text.encode("utf-8"))
+        digest.update(b"\0")
+    labels = tuple(label for label, _base, _text in entries)
+    return matcher, labels, digest.hexdigest(), recursive
+
+
+def _collect_nested_gitignore(
+    source: Path,
+    ignore_names: Sequence[str],
+    ignore_paths: Sequence[str],
+    default_ignores: Iterable[str],
+    gitignore: Optional[GitignoreMatcher] = None,
+    loaded_labels: Iterable[str] = (),
+) -> Sequence[Tuple[str, str]]:
+    """Collect nested ``.gitignore`` files in deterministic top-down order."""
+    names = set(default_ignores)
+    names.update(ignore_names)
+    path_parts = tuple(PurePosixPath(path).parts for path in ignore_paths)
+    loaded = set(loaded_labels)
+    active_rules = list(gitignore.rules) if gitignore is not None else []
+    active_matcher = GitignoreMatcher(active_rules)
+
+    def excluded(relative: Path) -> bool:
+        parts = relative.parts
+        if any(part in names for part in parts):
+            return True
+        if any(parts[: len(prefix)] == prefix for prefix in path_parts):
+            return True
+        if not active_rules:
+            return False
+        posix = PurePosixPath(relative.as_posix())
+        return active_matcher.matches(posix, is_directory=True) and not (
+            os.path.isdir(source / relative)
+            and active_matcher.may_reinclude_descendant(posix)
+        )
+
+    result: List[Tuple[str, str]] = []
+    for directory, dirnames, filenames in os.walk(
+        source,
+        topdown=True,
+        followlinks=False,
+    ):
+        directory_path = Path(directory)
+        if ".gitignore" in filenames:
+            path = directory_path / ".gitignore"
+            relative = path.relative_to(source)
+            label = relative.as_posix()
+            if label not in loaded:
+                try:
+                    text = path.read_text(encoding="utf-8")
+                except (OSError, UnicodeDecodeError) as exc:
+                    raise ValueError(
+                        "nested gitignore file could not be read: %s" % path
+                    ) from exc
+                try:
+                    parsed = GitignoreMatcher.from_text(
+                        text,
+                        label,
+                        relative.parent.parts,
+                    )
+                except GitignoreError as exc:
+                    raise ValueError(str(exc)) from exc
+                active_rules.extend(parsed.rules)
+                active_matcher = GitignoreMatcher(active_rules)
+                loaded.add(label)
+                result.append((label, text))
+        kept = []
+        for name in sorted(dirnames):
+            relative = (directory_path / name).relative_to(source)
+            if not excluded(relative):
+                kept.append(name)
+        dirnames[:] = kept
+    return result

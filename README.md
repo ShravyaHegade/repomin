@@ -211,11 +211,11 @@ repomin /path/to/project \
   --output /tmp/repro
 ```
 
-Ignored entries are never copied into candidate workspaces or exports. The
-effective sorted basename set is recorded in `report.json` and persistent
-session identity, so changing it on `--resume` is rejected. `--ignore` accepts
-one ordinary basename at a time; it is not a shell glob or a `.gitignore`
-parser.
+Ignored entries are never copied into candidate workspaces or exports unless
+they are explicitly named by `--keep`. The effective sorted basename set is
+recorded in `report.json` and persistent session identity, so changing it on
+`--resume` is rejected. `--ignore` accepts one ordinary basename at a time; it
+is not a shell glob or a `.gitignore` parser.
 
 For a monorepo where only one same-named subtree should be excluded, use an
 exact repository-relative path:
@@ -247,13 +247,16 @@ repomin /path/to/project \
 repeatable `--gitignore-file PATH`; relative paths are resolved against the
 repository. These rules are evaluated after the built-in and exact exclusions,
 so a negated `!` rule can restore a path excluded by an earlier rule file entry
-but can never restore a built-in or exact exclusion. The supported subset
+but can never restore a built-in or exact exclusion. An explicit `--keep` path
+takes precedence over all of these exclusions. The supported subset
 handles comments, blank lines, negation, trailing-slash directory rules,
 leading-slash anchoring, `*`, `**`, `?`, and `[...]` character classes. Escaping
 and per-directory precedence are not a full git implementation; ambiguous files
 should use exact `--ignore-path` entries instead. The rule-file paths and a
 SHA-256 digest of their contents are recorded in the report and persistent
 session identity, so a changed rule file is rejected on `--resume`.
+Trailing-slash rules are type-aware: they exclude the matching directory and
+its descendants, but do not exclude a same-named regular file.
 
 For repositories with per-directory rule files, use `--gitignore-recursive`.
 It applies the root `.gitignore` plus every nested `.gitignore`, each relative
@@ -289,8 +292,9 @@ repomin /path/to/project \
 `--keep` uses the same exact relative-path grammar as `--ignore-path` and does
 not accept glob syntax. It protects only file/directory deletion; manifest,
 source, and other reducers may still edit files inside a kept directory. The
-sorted keep paths are recorded in the report and session identity, so a changed
-set is rejected on `--resume`.
+keep declaration also wins over an active ignore rule for the target and the
+parent directories needed to reach it. The sorted keep paths are recorded in
+the report and session identity, so a changed set is rejected on `--resume`.
 
 To shrink the contents of a specific UTF-8 text file rather than deleting the
 whole file, pass repeatable `--text-file RELATIVE_PATH`. The reducer applies

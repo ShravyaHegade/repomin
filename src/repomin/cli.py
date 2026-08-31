@@ -20,7 +20,7 @@ from repomin.dotnet_manifest import DotnetManifestReducer
 from repomin.doctor import format_doctor, run_doctor
 from repomin.go_manifest import GoManifestReducer
 from repomin.gradle import GradleReducer
-from repomin.gitignore import GitignoreError, GitignoreMatcher
+from repomin.gitignore import GitignoreMatcher, load_gitignore
 from repomin.java import (
     JavaAnalysisClasspathEntry,
     JavaReducer,
@@ -207,129 +207,16 @@ def _load_gitignore(
     ignore_names: Sequence[str] = (),
     ignore_paths: Sequence[str] = (),
 ) -> Tuple[Optional[GitignoreMatcher], Sequence[str], Optional[str], bool]:
-    """Load optional gitignore-style exclusion files.
-
-    ``enabled`` adds the repository's ``.gitignore``. Each explicit file is
-    read once in command-line order; duplicate paths are collapsed. Relative
-    explicit paths are resolved against the source repository. The returned
-    digest covers the exact file bytes, so a resumed session rejects any
-    change to the exclusion rules without storing the potentially secret file
-    contents in a checkpoint.
-    """
-    if not enabled and not files and not recursive:
-        return None, (), None, False
-
-    source_root = source.resolve()
-    entries: list = []
-    base_entries: list = []
-    seen: set = set()
-
-    def add_path(path: Path) -> None:
-        resolved = path.expanduser().resolve()
-        key = str(resolved)
-        if key in seen:
-            return
-        seen.add(key)
-        try:
-            relative = resolved.relative_to(source_root)
-        except ValueError:
-            relative = None
-        label = relative.as_posix() if relative is not None else str(resolved)
-        base = relative.parent.parts if relative is not None else ()
-        if not resolved.is_file():
-            raise ValueError("gitignore file is not a regular file: %s" % resolved)
-        try:
-            data = resolved.read_bytes()
-        except OSError as exc:
-            raise ValueError("gitignore file could not be read: %s" % resolved) from exc
-        try:
-            text = data.decode("utf-8")
-        except UnicodeDecodeError as exc:
-            raise ValueError("gitignore file is not UTF-8: %s" % resolved) from exc
-        entry = (label, base, text)
-        entries.append(entry)
-        base_entries.append(entry)
-
-    if enabled or recursive:
-        add_path(source_root / ".gitignore")
-    for value in files:
-        path = Path(value).expanduser()
-        if not path.is_absolute():
-            path = source_root / path
-        add_path(path)
-
-    base_matcher = None
-    if base_entries:
-        try:
-            base_matcher = GitignoreMatcher.from_scoped_files(base_entries)
-        except GitignoreError as exc:
-            raise ValueError(str(exc)) from exc
-
-    if recursive:
-        collected = _collect_nested_gitignore(
-            source_root,
-            ignore_names,
-            ignore_paths,
-            base_matcher,
-        )
-        for label, text in collected:
-            path = source_root / label
-            add_path(path)
-
-    if not entries:
-        return None, (), None, recursive
-
-    try:
-        matcher = GitignoreMatcher.from_scoped_files(entries)
-    except GitignoreError as exc:
-        raise ValueError(str(exc)) from exc
-
-    digest = hashlib.sha256()
-    for label, _base, text in entries:
-        digest.update(label.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(text.encode("utf-8"))
-        digest.update(b"\0")
-    labels = tuple(label for label, _base, _text in entries)
-    return matcher, labels, digest.hexdigest(), recursive
-
-
-def _collect_nested_gitignore(
-    source: Path,
-    ignore_names: Sequence[str],
-    ignore_paths: Sequence[str],
-    gitignore: Optional[GitignoreMatcher] = None,
-) -> Sequence[Tuple[str, str]]:
-    """Collect nested ``.gitignore`` files in deterministic top-down order."""
-    from repomin.session import DEFAULT_IGNORES, IgnoreSet
-
-    ignores = IgnoreSet(DEFAULT_IGNORES, ignore_paths, gitignore)
-    ignores.update(ignore_names)
-    result = []
-    for directory, dirnames, filenames in os.walk(
+    """Compatibility wrapper for the shared gitignore loader."""
+    return load_gitignore(
         source,
-        topdown=True,
-        followlinks=False,
-    ):
-        directory_path = Path(directory)
-        kept = []
-        for name in sorted(dirnames):
-            relative = (directory_path / name).relative_to(source)
-            if not ignores.matches(relative):
-                kept.append(name)
-        dirnames[:] = kept
-        if ".gitignore" in filenames:
-            path = directory_path / ".gitignore"
-            relative = path.relative_to(source)
-            label = relative.as_posix()
-            try:
-                text = path.read_text(encoding="utf-8")
-            except (OSError, UnicodeDecodeError) as exc:
-                raise ValueError(
-                    "nested gitignore file could not be read: %s" % path
-                ) from exc
-            result.append((label, text))
-    return result
+        enabled,
+        files,
+        recursive=recursive,
+        ignore_names=ignore_names,
+        ignore_paths=ignore_paths,
+        default_ignores=DEFAULT_IGNORES,
+    )
 
 
 def _parse_environment(value: str) -> Tuple[str, str]:
@@ -1475,6 +1362,30 @@ def _doctor_command(argv: Sequence[str]) -> int:
         help="exact repository path excluded from baseline copies; repeatable",
     )
     parser.add_argument(
+        "--gitignore",
+        action="store_true",
+        help="apply the repository .gitignore as additional exclusions",
+    )
+    parser.add_argument(
+        "--gitignore-file",
+        dest="gitignore_files",
+        action="append",
+        default=[],
+        metavar="PATH",
+        help=(
+            "apply one explicit gitignore-style file; repeat for multiple files "
+            "(relative paths are resolved against the repository)"
+        ),
+    )
+    parser.add_argument(
+        "--gitignore-recursive",
+        action="store_true",
+        help=(
+            "apply the repository .gitignore and nested .gitignore files in "
+            "their respective directories"
+        ),
+    )
+    parser.add_argument(
         "--env",
         dest="environment_entries",
         action="append",
@@ -1511,6 +1422,9 @@ def _doctor_command(argv: Sequence[str]) -> int:
             output=args.output,
             ignore_names=args.ignore_names,
             ignore_paths=args.ignore_paths,
+            gitignore=args.gitignore,
+            gitignore_files=args.gitignore_files,
+            gitignore_recursive=args.gitignore_recursive,
         )
     except (OSError, RunnerError, ValueError) as exc:
         print("repomin doctor: %s" % exc, file=sys.stderr)
@@ -1935,7 +1849,9 @@ def _session_identity(
         "environment_names": sorted(configured_environment),
         "environment_sha256": _environment_digest(configured_environment),
         "ignored_paths": sorted(set(ignore_paths)),
-        "gitignore_files": sorted(set(gitignore_files)),
+        # Keep the effective rule-file order: it is part of matching
+        # semantics, not merely display metadata.
+        "gitignore_files": list(dict.fromkeys(gitignore_files)),
         "gitignore_sha256": gitignore_sha256,
         "gitignore_recursive": bool(gitignore_recursive),
         "keep_paths": sorted(set(keep_paths)),

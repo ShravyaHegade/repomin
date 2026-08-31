@@ -761,6 +761,62 @@ class CliTest(unittest.TestCase):
             assert matcher is not None
             self.assertTrue(matcher.matches(PurePosixPath("build/generated.txt")))
 
+    def test_recursive_gitignore_applies_nested_rules_while_discovering_files(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source"
+            source.mkdir()
+            (source / ".gitignore").write_text("\n", encoding="utf-8")
+            services = source / "services"
+            private = services / "private"
+            private.mkdir(parents=True)
+            (services / ".gitignore").write_text("/private/\n", encoding="utf-8")
+            # This file is malformed on purpose. Because the parent rule
+            # excludes ``private/``, recursive discovery must not read it.
+            (private / ".gitignore").write_text("[unterminated\n", encoding="utf-8")
+
+            matcher, files, digest, recursive = _load_gitignore(
+                source,
+                False,
+                [],
+                recursive=True,
+            )
+
+            self.assertTrue(recursive)
+            self.assertEqual(
+                [".gitignore", "services/.gitignore"], list(files)
+            )
+            assert matcher is not None
+            self.assertTrue(matcher.matches(PurePosixPath("services/private/x")))
+
+    def test_recursive_gitignore_keeps_double_star_negated_subtree_walkable(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source"
+            source.mkdir()
+            (source / ".gitignore").write_text(
+                "foo/\n!foo/**/keep.txt\n",
+                encoding="utf-8",
+            )
+            deep = source / "foo" / "x" / "y"
+            deep.mkdir(parents=True)
+            (deep / ".gitignore").write_text("*.tmp\n", encoding="utf-8")
+            (deep / "keep.txt").write_text("keep\n", encoding="utf-8")
+
+            matcher, files, digest, recursive = _load_gitignore(
+                source,
+                False,
+                [],
+                recursive=True,
+            )
+
+            self.assertTrue(recursive)
+            self.assertEqual(
+                [".gitignore", "foo/x/y/.gitignore"], list(files)
+            )
+            assert matcher is not None
+            self.assertFalse(
+                matcher.matches(PurePosixPath("foo/x/y/keep.txt"))
+            )
+
     def test_rate_options_are_parsed_and_use_a_single_count_minimum_by_default(self) -> None:
         args = build_parser().parse_args(
             [
@@ -1187,6 +1243,84 @@ class CliTest(unittest.TestCase):
             # The rule file remains an ordinary tracked source file; only the
             # entries its rules exclude disappear from the initial workspace.
             self.assertEqual(3, report["source"]["files"])
+
+    def test_bare_gitignore_directory_rule_keeps_copy_and_fingerprint_consistent(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            output = root / "output"
+            source.mkdir()
+            (source / "reproduce.py").write_text(SCRIPT, encoding="utf-8")
+            (source / "required.txt").write_text("keep\n", encoding="utf-8")
+            (source / ".gitignore").write_text("generated\n", encoding="utf-8")
+            generated = source / "generated"
+            generated.mkdir()
+            (generated / "package.json").write_text("{}\n", encoding="utf-8")
+
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        str(source),
+                        "--command",
+                        "python3 reproduce.py",
+                        "--match",
+                        "ORIGINAL_FAILURE",
+                        "--adapter",
+                        "none",
+                        "--source-reducer",
+                        "none",
+                        "--gitignore",
+                        "--output",
+                        str(output),
+                    ]
+                )
+
+            self.assertEqual(0, exit_code, stderr.getvalue())
+            self.assertFalse((output / "generated").exists())
+            report = _report(output)
+            self.assertEqual(3, report["source"]["files"])
+
+    def test_keep_path_overrides_gitignore_and_protects_parent_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            output = root / "output"
+            source.mkdir()
+            (source / "reproduce.py").write_text(SCRIPT, encoding="utf-8")
+            (source / "required.txt").write_text("keep\n", encoding="utf-8")
+            (source / ".gitignore").write_text("generated\n", encoding="utf-8")
+            generated = source / "generated"
+            generated.mkdir()
+            (generated / "keep.txt").write_text("keep this artifact\n", encoding="utf-8")
+            (generated / "drop.txt").write_text("discard this artifact\n", encoding="utf-8")
+
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        str(source),
+                        "--command",
+                        "python3 reproduce.py",
+                        "--match",
+                        "ORIGINAL_FAILURE",
+                        "--adapter",
+                        "none",
+                        "--source-reducer",
+                        "none",
+                        "--gitignore",
+                        "--keep",
+                        "generated/keep.txt",
+                        "--output",
+                        str(output),
+                    ]
+                )
+
+            self.assertEqual(0, exit_code, stderr.getvalue())
+            self.assertTrue((output / "generated" / "keep.txt").is_file())
+            self.assertFalse((output / "generated" / "drop.txt").exists())
 
     def test_recursive_gitignore_applies_nested_rule_files(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -389,29 +389,33 @@ repeatable `--gitignore-file PATH`. Rule files are parsed into an ordered
 matcher that supports comments, blank lines, negation, trailing-slash directory
 rules, leading-slash anchoring, `*`, `**`, `?`, and character classes. Their
 rules run after exact exclusions, so negation can only restore an entry that an
-earlier rule-file entry removed. Ignored entries are absent from source
-fingerprints, candidate workspaces, phase byte accounting, and exports. The
+earlier rule-file entry removed. Ignored entries that are not explicitly kept
+are absent from source fingerprints, candidate workspaces, phase byte
+accounting, and exports. The
 sorted effective basename and path sets and the rule-file digest are persisted
 in the report and session identity. A resume with a different set or changed
 rule-file content is rejected before any oracle command runs.
+Trailing-slash rules use the inspected entry type: they match the target
+directory and descendants, but not a same-named regular file.
 
 With `--gitignore-recursive`, ReproMin also reads nested `.gitignore` files in
 top-down directory order. Each rule is scoped to the directory that contains
 its file: the relative path supplied to the matcher is made relative to that
 scope before anchoring. Negation in a nested file therefore applies only within
-that subtree. Directories excluded by the built-in or exact ignore sets are not
-descended into and cannot contribute a nested rule file. The
-the collected rules. Directories excluded by the built-in, exact ignore, or
-already-applied gitignore rules are not descended into and cannot contribute a
-nested rule file. The `gitignore_recursive` boolean, sorted file list, and
-content digest are part of the persistent session identity, so resuming with a
-changed nested rule set is rejected before any oracle command runs.
+that subtree. Directories excluded by the built-in, exact, or already-applied
+gitignore rules are not descended into and cannot contribute a nested rule file.
+The `gitignore_recursive` boolean, sorted file list, and content digest are part
+of the persistent session identity, so resuming with a changed nested rule set
+is rejected before any oracle command runs.
 
 Repeatable `--keep RELATIVE_PATH` protects an exact file or directory (and all
 descendants) from the file reducer. It uses the same path grammar as
 `--ignore-path`, accepts no glob syntax, and is recorded in the report and
-session identity. Keeping a path prevents deletion but does not prevent source
-or manifest reducers from editing files inside a kept directory.
+session identity. A keep declaration takes precedence over an active ignore
+rule for the target and its required parent directories, so an explicitly kept
+path is present in the initial copy and every fingerprint. Keeping a path
+prevents deletion but does not prevent source or manifest reducers from editing
+files inside a kept directory.
 
 ### Reproduction environment
 

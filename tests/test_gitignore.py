@@ -42,6 +42,38 @@ class GitignoreMatcherTest(unittest.TestCase):
             ),
         )
 
+    def test_double_star_directory_segment_can_match_zero_directories(self) -> None:
+        self.assertEqual(
+            {
+                "foo/bar": True,
+                "foo/x/bar": True,
+                "foo/x/y/bar": True,
+                "bar": False,
+                "other/bar": False,
+            },
+            self._match(
+                "foo/**/bar",
+                "foo/bar",
+                "foo/x/bar",
+                "foo/x/y/bar",
+                "bar",
+                "other/bar",
+            ),
+        )
+        self.assertEqual(
+            {"bar": True, "nested/bar": True, "bar.txt": False},
+            self._match("**/bar", "bar", "nested/bar", "bar.txt"),
+        )
+
+    def test_embedded_double_star_stays_within_one_path_segment(self) -> None:
+        self.assertEqual(
+            {
+                "ab.txt": True,
+                "a/b.txt": False,
+            },
+            self._match("a**b.txt", "ab.txt", "a/b.txt"),
+        )
+
     def test_anchored_directory_rule_matches_descendants(self) -> None:
         self.assertEqual(
             {
@@ -59,6 +91,68 @@ class GitignoreMatcherTest(unittest.TestCase):
             ),
         )
 
+    def test_directory_only_rule_does_not_match_same_named_file(self) -> None:
+        matcher = GitignoreMatcher.from_text("generated/", "test")
+        self.assertFalse(
+            matcher.matches(PurePosixPath("generated"), is_directory=False)
+        )
+        self.assertTrue(
+            matcher.matches(PurePosixPath("generated"), is_directory=True)
+        )
+        self.assertTrue(
+            matcher.matches(PurePosixPath("generated/file.txt"), is_directory=False)
+        )
+
+    def test_wildcard_directory_rule_distinguishes_target_file_from_descendant(self) -> None:
+        matcher = GitignoreMatcher.from_text("foo/*/bar/", "test")
+        self.assertFalse(
+            matcher.matches(PurePosixPath("foo/x/bar"), is_directory=False)
+        )
+        self.assertTrue(
+            matcher.matches(PurePosixPath("foo/x/bar"), is_directory=True)
+        )
+        self.assertTrue(
+            matcher.matches(PurePosixPath("foo/x/bar/file.txt"), is_directory=False)
+        )
+
+    def test_double_star_directory_rule_keeps_descendant_files_ignored(self) -> None:
+        matcher = GitignoreMatcher.from_text("foo/**/", "test")
+        self.assertFalse(
+            matcher.matches(PurePosixPath("foo/x"), is_directory=False)
+        )
+        self.assertTrue(
+            matcher.matches(PurePosixPath("foo/x"), is_directory=True)
+        )
+        self.assertTrue(
+            matcher.matches(PurePosixPath("foo/x/file.txt"), is_directory=False)
+        )
+
+    def test_directory_only_negation_does_not_restore_same_named_file(self) -> None:
+        matcher = GitignoreMatcher.from_text("*\n!generated/\n", "test")
+        self.assertTrue(
+            matcher.matches(PurePosixPath("generated"), is_directory=False)
+        )
+        self.assertFalse(
+            matcher.matches(PurePosixPath("generated"), is_directory=True)
+        )
+
+    def test_bare_directory_rule_matches_descendants(self) -> None:
+        self.assertEqual(
+            {
+                "generated": True,
+                "generated/package.json": True,
+                "nested/generated/package.json": True,
+                "generated.txt": False,
+            },
+            self._match(
+                "generated",
+                "generated",
+                "generated/package.json",
+                "nested/generated/package.json",
+                "generated.txt",
+            ),
+        )
+
     def test_negation_reincludes_only_an_earlier_rule(self) -> None:
         self.assertEqual(
             {
@@ -72,6 +166,25 @@ class GitignoreMatcherTest(unittest.TestCase):
                 "build/keep.txt",
                 "build/drop.txt",
             ),
+        )
+
+    def test_double_star_negation_remains_reachable_at_deeper_depth(self) -> None:
+        matcher = GitignoreMatcher.from_text(
+            "foo/\n!foo/**/keep.txt\n",
+            "test",
+        )
+        self.assertTrue(matcher.may_reinclude_descendant(PurePosixPath("foo")))
+        self.assertTrue(
+            matcher.may_reinclude_descendant(PurePosixPath("foo/x/y"))
+        )
+        self.assertFalse(
+            matcher.may_reinclude_descendant(PurePosixPath("other/x/y"))
+        )
+        self.assertFalse(
+            matcher.matches(
+                PurePosixPath("foo/x/y/keep.txt"),
+                is_directory=False,
+            )
         )
 
     def test_question_mark_matches_one_non_separator_character(self) -> None:

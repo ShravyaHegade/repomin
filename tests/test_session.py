@@ -15,6 +15,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from repomin.execution import CommandRunner
+from repomin.gitignore import GitignoreMatcher
 from repomin.model import (
     CANDIDATE_FAMILY_CONTROL_POLICY,
     TREE_FINGERPRINT_POLICY,
@@ -37,6 +38,7 @@ from repomin.session import (
     ReductionSession,
     SessionError,
     _copy_repository,
+    IgnoreSet,
     _session_identities_match,
     _tree_digest,
     _validate_repository_entries,
@@ -262,6 +264,57 @@ time.sleep(1.5)
 
 
 class ReductionSessionTest(unittest.TestCase):
+    def test_directory_only_gitignore_preserves_same_named_regular_file(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            destination = root / "destination"
+            source.mkdir()
+            (source / ".gitignore").write_text("cache/\n", encoding="utf-8")
+            # A trailing slash must not discard a regular file with the same
+            # basename, while an actual directory with that basename remains
+            # ignored at any depth.
+            (source / "cache").write_text("this is a file\n", encoding="utf-8")
+            ignored_directory = source / "nested" / "cache"
+            ignored_directory.mkdir(parents=True)
+            (ignored_directory / "payload.txt").write_text(
+                "ignored\n", encoding="utf-8"
+            )
+
+            matcher = GitignoreMatcher.from_text("cache/\n")
+            ignores = IgnoreSet((), (), matcher)
+            _copy_repository(source, destination, ignores)
+
+            self.assertTrue((destination / "cache").is_file())
+            self.assertFalse((destination / "nested" / "cache").exists())
+            self.assertEqual(
+                _tree_digest(source, ignores), _tree_digest(destination, ignores)
+            )
+
+    def test_double_star_negation_preserves_deep_file_during_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            destination = root / "destination"
+            deep = source / "foo" / "x" / "y"
+            deep.mkdir(parents=True)
+            (source / ".gitignore").write_text(
+                "foo/\n!foo/**/keep.txt\n",
+                encoding="utf-8",
+            )
+            (deep / "keep.txt").write_text("keep\n", encoding="utf-8")
+            (deep / "drop.txt").write_text("drop\n", encoding="utf-8")
+
+            matcher = GitignoreMatcher.from_text("foo/\n!foo/**/keep.txt\n")
+            ignores = IgnoreSet((), (), matcher)
+            _copy_repository(source, destination, ignores)
+
+            self.assertTrue((destination / "foo" / "x" / "y" / "keep.txt").is_file())
+            self.assertFalse((destination / "foo" / "x" / "y" / "drop.txt").exists())
+            self.assertEqual(
+                _tree_digest(source, ignores), _tree_digest(destination, ignores)
+            )
+
     def test_session_identity_tracks_gitignore_rules(self) -> None:
         base = {"command": "true"}
         self.assertTrue(_session_identities_match(base, dict(base)))
@@ -326,6 +379,48 @@ class ReductionSessionTest(unittest.TestCase):
         changed_text = dict(with_text)
         changed_text["text_files"] = ["other.txt"]
         self.assertFalse(_session_identities_match(with_text, changed_text))
+
+    def test_session_identity_tracks_gitignore_rule_file_order(self) -> None:
+        first = {
+            "gitignore_files": ["root.ignore", "local.ignore"],
+            "gitignore_sha256": None,
+        }
+        second = dict(first)
+        second["gitignore_files"] = ["local.ignore", "root.ignore"]
+
+        self.assertFalse(_session_identities_match(first, second))
+
+    def test_legacy_ignore_matcher_is_called_once_without_directory_keyword(self) -> None:
+        calls = []
+
+        class LegacyMatcher:
+            def matches(self, relative):
+                calls.append(relative)
+                return True
+
+        from repomin.session import _is_ignored
+
+        self.assertTrue(
+            _is_ignored(Path("generated/file.txt"), LegacyMatcher(), is_directory=False)
+        )
+        self.assertEqual([Path("generated/file.txt")], calls)
+
+    def test_ignore_matcher_internal_type_error_is_not_retried(self) -> None:
+        calls = []
+
+        class BrokenMatcher:
+            def matches(self, relative, is_directory=None):
+                calls.append((relative, is_directory))
+                raise TypeError("matcher implementation failed")
+
+        from repomin.session import _is_ignored
+
+        with self.assertRaisesRegex(TypeError, "implementation failed"):
+            _is_ignored(Path("generated/file.txt"), BrokenMatcher(), is_directory=False)
+        self.assertEqual(
+            [(Path("generated/file.txt"), False)],
+            calls,
+        )
 
     def test_default_ignores_cover_common_generated_dependency_directories(self) -> None:
         self.assertTrue({".vs", "bin", "obj", "vendor"}.issubset(DEFAULT_IGNORES))
