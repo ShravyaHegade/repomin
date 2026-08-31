@@ -98,6 +98,13 @@ class ActionContractTests(unittest.TestCase):
         self.assertIn("ignore-path", self.docs)
         self.assertIn("gitignore-recursive", self.docs)
 
+    def test_docs_describe_python_runtime_path_behavior(self) -> None:
+        self.assertIn("python-version", self.action)
+        self.assertIn("prepends that interpreter to `PATH`", self.docs)
+        self.assertIn("does not reconstruct the PATH", self.docs)
+        self.assertIn("version used", self.docs)
+        self.assertIn("failing job", self.docs)
+
     def test_embedded_output_reader_is_indented_inside_yaml_block(self) -> None:
         lines = self.action.splitlines()
         start = lines.index("          python - \"$report_path\" <<'PY'")

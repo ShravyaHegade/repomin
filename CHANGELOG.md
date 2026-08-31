@@ -61,6 +61,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   distribution installs outside the checkout.
 - The contributor and support entry points now include a structured real-failure
   issue template and a short claim-to-PR workflow.
+- The GitHub Action guide now documents that `python-version` changes the
+  action-step `PATH`, so Python-based reproduction commands should match the
+  failed job's interpreter when required.
 
 ### Fixed
 

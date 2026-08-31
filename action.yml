@@ -121,7 +121,7 @@ inputs:
     required: false
     default: "1"
   python-version:
-    description: Python version used to install and run ReproMin
+    description: Python version used to install and run ReproMin; setup-python puts it first on PATH for the reproduction command
     required: false
     default: "3.13"
   artifact-name:

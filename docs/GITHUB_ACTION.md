@@ -45,8 +45,13 @@ exclusive, while `match` may be combined with either to narrow the oracle.
 
 `source`, `output`, `adapter`, `source-reducer`, `backend`, `docker-image`,
 `docker-network`, `timeout`, and `jobs` map directly to the corresponding CLI
-options. `python-version` selects the action runtime, and `artifact-name`
-controls the uploaded artifact name.
+options. `python-version` selects the interpreter used to install and run
+ReproMin. `actions/setup-python` also prepends that interpreter to `PATH` for
+the action steps, so a reproduction command that resolves `python` or
+`python3` can run under this version. It does not reconstruct the PATH or
+runtime from an earlier failed step; set `python-version` to the version used
+by the failing job (or invoke an explicit interpreter) when that distinction
+matters. `artifact-name` controls the uploaded artifact name.
 
 `ignore` and `ignore-path` accept one exact entry per line. Use them for
 secrets or private fixtures that must never enter the uploaded payload;
