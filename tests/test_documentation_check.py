@@ -25,9 +25,10 @@ class DocumentationCheckTest(unittest.TestCase):
     def test_valid_utf8_lf_and_fences_pass(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = self._file(Path(directory))
-            path.write_text(
-                "# Example\n\n```sh\nprintf 'ok\\n'\n```\n\n~~~python\npass\n~~~\n",
-                encoding="utf-8",
+            path.write_bytes(
+                "# Example\n\n```sh\nprintf 'ok\\n'\n```\n\n~~~python\npass\n~~~\n".encode(
+                    "utf-8"
+                )
             )
 
             self.assertEqual([], _MODULE.check_markdown_file(path))
@@ -58,7 +59,9 @@ class DocumentationCheckTest(unittest.TestCase):
     def test_unclosed_fence_reports_opening_line(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = self._file(Path(directory))
-            path.write_text("# title\n\n  ```json\n{\"ok\": true}\n", encoding="utf-8")
+            path.write_bytes(
+                "# title\n\n  ```json\n{\"ok\": true}\n".encode("utf-8")
+            )
 
             issues = _MODULE.check_markdown_file(path)
 
@@ -69,10 +72,7 @@ class DocumentationCheckTest(unittest.TestCase):
     def test_fence_closer_must_match_marker_and_be_long_enough(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = self._file(Path(directory))
-            path.write_text(
-                "```python\n~~~\n``\n",
-                encoding="utf-8",
-            )
+            path.write_bytes("```python\n~~~\n``\n".encode("utf-8"))
 
             issues = _MODULE.check_markdown_file(path)
 
@@ -82,9 +82,9 @@ class DocumentationCheckTest(unittest.TestCase):
     def test_indented_content_and_ignored_directories_are_not_scanned(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            self._file(root).write_text("    ```\n", encoding="utf-8")
-            self._file(root / ".venv").write_text("```\n", encoding="utf-8")
-            self._file(root / "docs").write_text("ok\n", encoding="utf-8")
+            self._file(root).write_bytes(b"    ```\n")
+            self._file(root / ".venv").write_bytes(b"```\n")
+            self._file(root / "docs").write_bytes(b"ok\n")
 
             files = _MODULE.find_markdown_files(root)
             issues = _MODULE.check_tree(root)
